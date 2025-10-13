@@ -1,0 +1,17 @@
+[
+  {
+    "id": "team-001",
+    "name": "Alpha Team",
+    "members": ["ann-001","ann-002"]
+  },
+  {
+    "id": "team-002",
+    "name": "Bravo Squad",
+    "members": ["ann-003","ann-004","ann-005"]
+  },
+  {
+    "id": "team-003",
+    "name": "Charlie Group",
+    "members": ["ann-002","ann-004"]
+  }
+]
