@@ -1,9 +1,12 @@
 import React, { useState } from "react";
-import { SunIcon, MoonIcon } from "lucide-react"; // Make sure to install: npm i lucide-react
+import { SunIcon, MoonIcon } from "lucide-react";
+import axios from "axios";
 
 export default function Login() {
   const [isDark, setIsDark] = useState(false);
   const [formData, setFormData] = useState({ userId: "", password: "" });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const toggleTheme = () => setIsDark(!isDark);
 
@@ -11,10 +14,45 @@ export default function Login() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Login attempt:", formData);
-    // TODO: Call your backend auth API here
+    setError("");
+    setLoading(true);
+
+    try {
+      // Send login request to FastAPI backend
+      const res = await axios.post("http://127.0.0.1:8000/api/general/login", {
+        id: formData.userId,
+        password: formData.password,
+      });
+
+      const token = res.data?.access_token;
+      const tokenType = res.data?.token_type || "bearer";
+
+      if (!token) {
+        throw new Error("No access token returned from server");
+      }
+
+      // Persist token info
+      localStorage.setItem("token", token);
+      localStorage.setItem("token_type", tokenType);
+
+      // Configure axios for subsequent requests
+      axios.defaults.headers.common["Authorization"] = `${tokenType === "bearer" ? "Bearer " : ""}${token}`;
+
+      alert("Login successful!");
+      console.log("JWT:", token);
+
+      // ✅ Optionally redirect to dashboard
+      window.location.href = "/dashboard";
+    } catch (err) {
+      console.error(err);
+      const message =
+        err.response?.data?.detail || err.response?.data?.message || err.message || "Login failed. Please check credentials.";
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -80,12 +118,18 @@ export default function Login() {
             />
           </div>
 
+          {/* Error */}
+          {error && <p className="text-red-500 text-sm">{error}</p>}
+
           {/* Submit */}
           <button
             type="submit"
-            className="w-full mt-4 bg-yellow-400 hover:bg-yellow-500 text-black font-semibold py-2 rounded-lg transition-all duration-300"
+            disabled={loading}
+            className={`w-full mt-4 bg-yellow-400 hover:bg-yellow-500 text-black font-semibold py-2 rounded-lg transition-all duration-300 ${
+              loading ? "opacity-60 cursor-not-allowed" : ""
+            }`}
           >
-            Sign In
+            {loading ? "Signing In..." : "Sign In"}
           </button>
         </form>
       </div>
