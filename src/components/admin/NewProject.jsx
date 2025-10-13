@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   UploadCloud,
   Eye,
@@ -7,23 +7,43 @@ import {
   PlusCircle,
   Check,
   X,
+  Loader2,
 } from "lucide-react";
+import { adminAPI } from "../../services/api";
 
 const NewProject = () => {
   const [projectName, setProjectName] = useState("");
+  const [description, setDescription] = useState("");
   const [boxType, setBoxType] = useState("2D");
   const [labels, setLabels] = useState([]);
   const [newLabel, setNewLabel] = useState("");
   const [selectedAnnotators, setSelectedAnnotators] = useState([]);
   const [uploadedImages, setUploadedImages] = useState([]);
+  const [annotators, setAnnotators] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  // Sample annotators JSON (hardcoded)
-  const annotators = [
-    { id: 1, name: "Hemanth", email: "hemanth@vista.com" },
-    { id: 2, name: "Mahaashri", email: "mahaashri@vista.com" },
-    { id: 3, name: "Saravanan", email: "saravanan@vista.com" },
-    { id: 4, name: "Dharshini", email: "dharshini@vista.com" },
-  ];
+  // Fetch users from backend on component mount
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    try {
+      const users = await adminAPI.getAllUsers();
+      setAnnotators(users);
+    } catch (error) {
+      console.error("Failed to fetch users:", error);
+      // Fallback to hardcoded users if API fails
+      setAnnotators([
+        { id: 1, name: "Hemanth", email: "hemanth@vista.com" },
+        { id: 2, name: "Mahaashri", email: "mahaashri@vista.com" },
+        { id: 3, name: "Saravanan", email: "saravanan@vista.com" },
+        { id: 4, name: "Dharshini", email: "dharshini@vista.com" },
+      ]);
+    }
+  };
 
   // Handle selecting annotators
   const toggleAnnotator = (id) => {
@@ -67,24 +87,71 @@ const NewProject = () => {
   };
 
   // Form submit
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!projectName) {
-      alert("Please enter a project name!");
+      setError("Please enter a project name!");
       return;
     }
 
-    const newProject = {
-      name: projectName,
-      boxType,
-      labels,
-      annotators: annotators.filter((a) =>
-        selectedAnnotators.includes(a.id)
-      ),
-      images: uploadedImages.map((i) => i.name),
-    };
+    if (uploadedImages.length === 0) {
+      setError("Please upload at least one image!");
+      return;
+    }
 
-    console.log("New Project Data:", newProject);
-    alert("Project created successfully!");
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      // Step 1: Create the project
+      console.log("Creating project...");
+      const projectData = {
+        name: projectName,
+        description: description,
+        labels: labels,
+      };
+
+      const projectResponse = await adminAPI.createProject(projectData);
+      console.log("Project created:", projectResponse);
+
+      // Step 2: Add project members (if any selected)
+      if (selectedAnnotators.length > 0) {
+        console.log("Adding project members...");
+        const selectedUsers = annotators.filter((a) =>
+          selectedAnnotators.includes(a.id)
+        );
+        
+        await adminAPI.addProjectMembers(projectName, selectedUsers);
+        console.log("Project members added successfully");
+      }
+
+      // Step 3: Upload files to S3
+      console.log("Uploading files to S3...");
+      const files = uploadedImages.map((img) => img.file);
+      const uploadResponse = await adminAPI.uploadFilesToS3(
+        projectName,
+        files,
+        projectResponse.project.id
+      );
+      console.log("Files uploaded:", uploadResponse);
+
+      setSuccess(
+        `Project "${projectName}" created successfully! ${uploadResponse.files_uploaded} files uploaded.`
+      );
+
+      // Reset form
+      setProjectName("");
+      setDescription("");
+      setLabels([]);
+      setSelectedAnnotators([]);
+      setUploadedImages([]);
+
+    } catch (error) {
+      console.error("Error creating project:", error);
+      setError(error.message || "Failed to create project. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -93,11 +160,24 @@ const NewProject = () => {
         Create New Project
       </h2>
 
+      {/* Error and Success Messages */}
+      {error && (
+        <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+          {error}
+        </div>
+      )}
+      
+      {success && (
+        <div className="mb-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg">
+          {success}
+        </div>
+      )}
+
       {/* Project Details */}
       <div className="grid md:grid-cols-2 gap-6 mb-8">
         <div>
           <label className="block text-gray-700 font-medium mb-2">
-            Project Name
+            Project Name *
           </label>
           <input
             type="text"
@@ -105,6 +185,7 @@ const NewProject = () => {
             onChange={(e) => setProjectName(e.target.value)}
             placeholder="Enter project name"
             className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-400 outline-none"
+            disabled={loading}
           />
         </div>
 
@@ -116,11 +197,27 @@ const NewProject = () => {
             value={boxType}
             onChange={(e) => setBoxType(e.target.value)}
             className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-400 outline-none"
+            disabled={loading}
           >
             <option value="2D">2D</option>
             <option value="3D">3D</option>
           </select>
         </div>
+      </div>
+
+      {/* Project Description */}
+      <div className="mb-8">
+        <label className="block text-gray-700 font-medium mb-2">
+          Project Description
+        </label>
+        <textarea
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Enter project description (optional)"
+          rows={3}
+          className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-400 outline-none"
+          disabled={loading}
+        />
       </div>
 
       {/* Team Members */}
@@ -132,8 +229,12 @@ const NewProject = () => {
           {annotators.map((user) => (
             <div
               key={user.id}
-              onClick={() => toggleAnnotator(user.id)}
-              className={`flex items-center p-4 border rounded-lg cursor-pointer transition ${
+              onClick={() => !loading && toggleAnnotator(user.id)}
+              className={`flex items-center p-4 border rounded-lg transition ${
+                loading 
+                  ? "cursor-not-allowed opacity-50" 
+                  : "cursor-pointer"
+              } ${
                 selectedAnnotators.includes(user.id)
                   ? "bg-indigo-100 border-indigo-500"
                   : "bg-white hover:bg-gray-50"
@@ -142,7 +243,8 @@ const NewProject = () => {
               <input
                 type="checkbox"
                 checked={selectedAnnotators.includes(user.id)}
-                onChange={() => toggleAnnotator(user.id)}
+                onChange={() => !loading && toggleAnnotator(user.id)}
+                disabled={loading}
                 className="mr-3 h-5 w-5 accent-indigo-600 cursor-pointer"
               />
               <User className="text-indigo-600 mr-3" />
@@ -168,17 +270,20 @@ const NewProject = () => {
             onChange={(e) => setNewLabel(e.target.value)}
             placeholder="Enter label name"
             className="border border-gray-300 rounded-lg px-4 py-2 w-64 focus:ring-2 focus:ring-indigo-400 outline-none"
+            disabled={loading}
           />
           <button
             onClick={addLabel}
-            className="p-2 rounded-lg bg-green-500 hover:bg-green-600 text-white"
+            disabled={loading}
+            className="p-2 rounded-lg bg-green-500 hover:bg-green-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
             title="Add Label"
           >
             <Check size={20} />
           </button>
           <button
             onClick={clearLabelInput}
-            className="p-2 rounded-lg bg-red-500 hover:bg-red-600 text-white"
+            disabled={loading}
+            className="p-2 rounded-lg bg-red-500 hover:bg-red-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
             title="Clear"
           >
             <X size={20} />
@@ -212,11 +317,15 @@ const NewProject = () => {
 
         <label
           htmlFor="fileUpload"
-          className="flex flex-col items-center justify-center w-full border-2 border-dashed border-indigo-400 rounded-xl py-10 cursor-pointer hover:bg-indigo-50 transition"
+          className={`flex flex-col items-center justify-center w-full border-2 border-dashed border-indigo-400 rounded-xl py-10 transition ${
+            loading 
+              ? "cursor-not-allowed opacity-50" 
+              : "cursor-pointer hover:bg-indigo-50"
+          }`}
         >
           <UploadCloud className="text-indigo-500 mb-3" size={40} />
           <span className="text-indigo-600 font-medium">
-            Click or drag to upload images
+            {loading ? "Uploading..." : "Click or drag to upload images"}
           </span>
           <input
             id="fileUpload"
@@ -224,6 +333,7 @@ const NewProject = () => {
             multiple
             accept="image/*"
             onChange={handleImageUpload}
+            disabled={loading}
             className="hidden"
           />
         </label>
@@ -256,14 +366,19 @@ const NewProject = () => {
 
       {/* Footer Buttons */}
       <div className="flex justify-end gap-4 mt-10">
-        <button className="px-6 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 transition">
+        <button 
+          className="px-6 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={loading}
+        >
           Cancel
         </button>
         <button
           onClick={handleCreate}
-          className="px-6 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition"
+          disabled={loading}
+          className="px-6 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
-          Create Tasks
+          {loading && <Loader2 className="animate-spin" size={20} />}
+          {loading ? "Creating..." : "Create Tasks"}
         </button>
       </div>
     </div>
