@@ -9,40 +9,135 @@ import {
   X,
   Loader2,
 } from "lucide-react";
-import { adminAPI } from "../../services/api";
 
 const NewProject = () => {
   const [projectName, setProjectName] = useState("");
-  const [description, setDescription] = useState("");
   const [boxType, setBoxType] = useState("2D");
   const [labels, setLabels] = useState([]);
   const [newLabel, setNewLabel] = useState("");
   const [selectedAnnotators, setSelectedAnnotators] = useState([]);
   const [uploadedImages, setUploadedImages] = useState([]);
-  const [annotators, setAnnotators] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [annotators, setAnnotators] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
 
-  // Fetch users from backend on component mount
+  // Backend API configuration
+  const API_BASE_URL = "http://localhost:8000"; // Update this with your backend URL
+
+  // Fetch users from backend
+  const fetchUsers = async () => {
+    try {
+      setLoadingUsers(true);
+      const response = await fetch(`${API_BASE_URL}/api/admin/get_all_user`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch users: ${response.status}`);
+      }
+
+      const users = await response.json();
+      console.log("Fetched users:", users);
+      
+      // Transform users to match the expected format
+      const formattedUsers = users.map(user => ({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role
+      }));
+      
+      setAnnotators(formattedUsers);
+    } catch (err) {
+      console.error("Error fetching users:", err);
+      setError(`Failed to load users: ${err.message}`);
+      // Fallback to empty array
+      setAnnotators([]);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  // Load users on component mount
   useEffect(() => {
     fetchUsers();
   }, []);
 
-  const fetchUsers = async () => {
-    try {
-      const users = await adminAPI.getAllUsers();
-      setAnnotators(users);
-    } catch (error) {
-      console.error("Failed to fetch users:", error);
-      // Fallback to hardcoded users if API fails
-      setAnnotators([
-        { id: 1, name: "Hemanth", email: "hemanth@vista.com" },
-        { id: 2, name: "Mahaashri", email: "mahaashri@vista.com" },
-        { id: 3, name: "Saravanan", email: "saravanan@vista.com" },
-        { id: 4, name: "Dharshini", email: "dharshini@vista.com" },
-      ]);
+  // API Functions
+  const createProject = async (projectData) => {
+    const response = await fetch(`${API_BASE_URL}/api/admin/create_project`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        project_name: projectData.name,
+        description: `Project for ${projectData.boxType} annotation`,
+        classes: projectData.labels,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to create project");
     }
+
+    return await response.json();
+  };
+
+  const addProjectMembers = async (projectName, members) => {
+    const requestData = {
+      project_name: projectName,
+      members: members.map(member => ({
+        user_id: member.id.toString(), // Ensure it's a string
+        project_role: "annotator"
+      })),
+    };
+    
+    console.log("Sending add project members request:", requestData);
+    
+    const response = await fetch(`${API_BASE_URL}/api/admin/add_project_members`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(requestData),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("Add project members error:", errorData);
+      throw new Error(errorData.detail || `Failed to add project members: ${response.status}`);
+    }
+
+    return await response.json();
+  };
+
+  const uploadFilesToS3 = async (projectName, files) => {
+    const formData = new FormData();
+    formData.append("id", Date.now().toString()); // Generate unique ID
+    formData.append("project_name", projectName);
+    
+    files.forEach(file => {
+      formData.append("proofImages", file.file);
+    });
+
+    const response = await fetch(`${API_BASE_URL}/api/admin/upload-to-s3`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.detail || "Failed to upload files");
+    }
+
+    return await response.json();
   };
 
   // Handle selecting annotators
@@ -88,8 +183,23 @@ const NewProject = () => {
 
   // Form submit
   const handleCreate = async () => {
-    if (!projectName) {
+    // Clear previous messages
+    setError("");
+    setSuccess("");
+
+    // Validation
+    if (!projectName.trim()) {
       setError("Please enter a project name!");
+      return;
+    }
+
+    if (labels.length === 0) {
+      setError("Please add at least one label!");
+      return;
+    }
+
+    if (selectedAnnotators.length === 0) {
+      setError("Please select at least one team member!");
       return;
     }
 
@@ -98,59 +208,63 @@ const NewProject = () => {
       return;
     }
 
-    setLoading(true);
-    setError("");
-    setSuccess("");
+    setIsLoading(true);
 
     try {
-      // Step 1: Create the project
-      console.log("Creating project...");
       const projectData = {
-        name: projectName,
-        description: description,
-        labels: labels,
+        name: projectName.trim(),
+        boxType,
+        labels,
+        annotators: annotators.filter((a) =>
+          selectedAnnotators.includes(a.id)
+        ),
+        images: uploadedImages.map((i) => i.name),
       };
 
-      const projectResponse = await adminAPI.createProject(projectData);
-      console.log("Project created:", projectResponse);
+      console.log("Creating project:", projectData);
 
-      // Step 2: Add project members (if any selected)
-      if (selectedAnnotators.length > 0) {
-        console.log("Adding project members...");
-        const selectedUsers = annotators.filter((a) =>
-          selectedAnnotators.includes(a.id)
-        );
-        
-        await adminAPI.addProjectMembers(projectName, selectedUsers);
+      // Step 1: Create project
+      const projectResult = await createProject(projectData);
+      console.log("Project created:", projectResult);
+
+      // Step 2: Add project members
+      if (projectData.annotators.length > 0) {
+        console.log("Adding project members:", projectData.annotators);
+        await addProjectMembers(projectData.name, projectData.annotators);
         console.log("Project members added successfully");
       }
 
       // Step 3: Upload files to S3
-      console.log("Uploading files to S3...");
-      const files = uploadedImages.map((img) => img.file);
-      const uploadResponse = await adminAPI.uploadFilesToS3(
-        projectName,
-        files,
-        projectResponse.project.id
-      );
-      console.log("Files uploaded:", uploadResponse);
+      if (uploadedImages.length > 0) {
+        const uploadResult = await uploadFilesToS3(projectData.name, uploadedImages);
+        console.log("Files uploaded:", uploadResult);
+      }
 
-      setSuccess(
-        `Project "${projectName}" created successfully! ${uploadResponse.files_uploaded} files uploaded.`
-      );
-
+      setSuccess("Project created successfully! All data has been saved to the database.");
+      
       // Reset form
       setProjectName("");
-      setDescription("");
       setLabels([]);
       setSelectedAnnotators([]);
       setUploadedImages([]);
+      setNewLabel("");
 
-    } catch (error) {
-      console.error("Error creating project:", error);
-      setError(error.message || "Failed to create project. Please try again.");
+    } catch (err) {
+      console.error("Error creating project:", err);
+      // Handle different types of errors
+      let errorMessage = "Failed to create project. Please try again.";
+      
+      if (err.message) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err.toString && err.toString() !== '[object Object]') {
+        errorMessage = err.toString();
+      }
+      
+      setError(errorMessage);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -160,16 +274,23 @@ const NewProject = () => {
         Create New Project
       </h2>
 
-      {/* Error and Success Messages */}
+      {/* Error Message */}
       {error && (
         <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
-          {error}
+          <div className="flex items-center">
+            <X className="mr-2" size={20} />
+            {error}
+          </div>
         </div>
       )}
-      
+
+      {/* Success Message */}
       {success && (
         <div className="mb-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg">
-          {success}
+          <div className="flex items-center">
+            <Check className="mr-2" size={20} />
+            {success}
+          </div>
         </div>
       )}
 
@@ -177,7 +298,7 @@ const NewProject = () => {
       <div className="grid md:grid-cols-2 gap-6 mb-8">
         <div>
           <label className="block text-gray-700 font-medium mb-2">
-            Project Name *
+            Project Name
           </label>
           <input
             type="text"
@@ -185,7 +306,6 @@ const NewProject = () => {
             onChange={(e) => setProjectName(e.target.value)}
             placeholder="Enter project name"
             className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-400 outline-none"
-            disabled={loading}
           />
         </div>
 
@@ -197,7 +317,6 @@ const NewProject = () => {
             value={boxType}
             onChange={(e) => setBoxType(e.target.value)}
             className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-400 outline-none"
-            disabled={loading}
           >
             <option value="2D">2D</option>
             <option value="3D">3D</option>
@@ -205,36 +324,33 @@ const NewProject = () => {
         </div>
       </div>
 
-      {/* Project Description */}
-      <div className="mb-8">
-        <label className="block text-gray-700 font-medium mb-2">
-          Project Description
-        </label>
-        <textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="Enter project description (optional)"
-          rows={3}
-          className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-400 outline-none"
-          disabled={loading}
-        />
-      </div>
-
       {/* Team Members */}
       <div className="mb-8">
         <h3 className="text-xl font-semibold text-gray-800 mb-4">
           Add Team Members
         </h3>
-        <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-          {annotators.map((user) => (
+        {loadingUsers ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="animate-spin mr-2" size={20} />
+            <span>Loading users...</span>
+          </div>
+        ) : annotators.length === 0 ? (
+          <div className="text-center py-8 text-gray-500">
+            <p>No users found. Please add users first.</p>
+            <button 
+              onClick={fetchUsers}
+              className="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            >
+              Retry Loading Users
+            </button>
+          </div>
+        ) : (
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {annotators.map((user) => (
             <div
               key={user.id}
-              onClick={() => !loading && toggleAnnotator(user.id)}
-              className={`flex items-center p-4 border rounded-lg transition ${
-                loading 
-                  ? "cursor-not-allowed opacity-50" 
-                  : "cursor-pointer"
-              } ${
+              onClick={() => toggleAnnotator(user.id)}
+              className={`flex items-center p-4 border rounded-lg cursor-pointer transition ${
                 selectedAnnotators.includes(user.id)
                   ? "bg-indigo-100 border-indigo-500"
                   : "bg-white hover:bg-gray-50"
@@ -243,8 +359,7 @@ const NewProject = () => {
               <input
                 type="checkbox"
                 checked={selectedAnnotators.includes(user.id)}
-                onChange={() => !loading && toggleAnnotator(user.id)}
-                disabled={loading}
+                onChange={() => toggleAnnotator(user.id)}
                 className="mr-3 h-5 w-5 accent-indigo-600 cursor-pointer"
               />
               <User className="text-indigo-600 mr-3" />
@@ -255,6 +370,7 @@ const NewProject = () => {
             </div>
           ))}
         </div>
+        )}
       </div>
 
       {/* Labels Section */}
@@ -270,20 +386,17 @@ const NewProject = () => {
             onChange={(e) => setNewLabel(e.target.value)}
             placeholder="Enter label name"
             className="border border-gray-300 rounded-lg px-4 py-2 w-64 focus:ring-2 focus:ring-indigo-400 outline-none"
-            disabled={loading}
           />
           <button
             onClick={addLabel}
-            disabled={loading}
-            className="p-2 rounded-lg bg-green-500 hover:bg-green-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 rounded-lg bg-green-500 hover:bg-green-600 text-white"
             title="Add Label"
           >
             <Check size={20} />
           </button>
           <button
             onClick={clearLabelInput}
-            disabled={loading}
-            className="p-2 rounded-lg bg-red-500 hover:bg-red-600 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            className="p-2 rounded-lg bg-red-500 hover:bg-red-600 text-white"
             title="Clear"
           >
             <X size={20} />
@@ -317,15 +430,11 @@ const NewProject = () => {
 
         <label
           htmlFor="fileUpload"
-          className={`flex flex-col items-center justify-center w-full border-2 border-dashed border-indigo-400 rounded-xl py-10 transition ${
-            loading 
-              ? "cursor-not-allowed opacity-50" 
-              : "cursor-pointer hover:bg-indigo-50"
-          }`}
+          className="flex flex-col items-center justify-center w-full border-2 border-dashed border-indigo-400 rounded-xl py-10 cursor-pointer hover:bg-indigo-50 transition"
         >
           <UploadCloud className="text-indigo-500 mb-3" size={40} />
           <span className="text-indigo-600 font-medium">
-            {loading ? "Uploading..." : "Click or drag to upload images"}
+            Click or drag to upload images
           </span>
           <input
             id="fileUpload"
@@ -333,7 +442,6 @@ const NewProject = () => {
             multiple
             accept="image/*"
             onChange={handleImageUpload}
-            disabled={loading}
             className="hidden"
           />
         </label>
@@ -367,18 +475,18 @@ const NewProject = () => {
       {/* Footer Buttons */}
       <div className="flex justify-end gap-4 mt-10">
         <button 
-          className="px-6 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 transition disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={loading}
+          className="px-6 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 transition"
+          disabled={isLoading}
         >
           Cancel
         </button>
         <button
           onClick={handleCreate}
-          disabled={loading}
+          disabled={isLoading}
           className="px-6 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
         >
-          {loading && <Loader2 className="animate-spin" size={20} />}
-          {loading ? "Creating..." : "Create Tasks"}
+          {isLoading && <Loader2 className="animate-spin" size={16} />}
+          {isLoading ? "Creating..." : "Create Tasks"}
         </button>
       </div>
     </div>
