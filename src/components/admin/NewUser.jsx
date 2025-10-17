@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 
+const API_BASE_URL = "http://localhost:8000"; // 👈 your backend base URL
+
 const NewUser = () => {
   const [userId, setUserId] = useState("");
   const [formData, setFormData] = useState({
@@ -8,18 +10,22 @@ const NewUser = () => {
     password: "",
     role: "",
   });
+  const [loading, setLoading] = useState(false);
 
   // Auto-generate user ID like VISTAxxxx
+  const generateUserId = () => {
+    return "VISTA" + Math.floor(1000 + Math.random() * 9000);
+  };
+
   useEffect(() => {
-    const randomId = "VISTA" + Math.floor(1000 + Math.random() * 9000);
-    setUserId(randomId);
+    setUserId(generateUserId());
   }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     // Form validation
@@ -30,16 +36,44 @@ const NewUser = () => {
 
     const newUser = {
       id: userId,
-      ...formData,
+      name: formData.name,
+      email: formData.email,
+      password: formData.password,
+      role: formData.role,
+      otp: null,
+      otpExpiry: null,
     };
 
-    console.log("New User Data:", newUser);
-    alert(`User ${formData.name} created successfully with ID ${userId}!`);
+    try {
+      setLoading(true);
 
-    // Clear form
-    setFormData({ name: "", email: "", password: "", role: "" });
-    const randomId = "VISTA" + Math.floor(1000 + Math.random() * 9000);
-    setUserId(randomId);
+      const response = await fetch(`${API_BASE_URL}/api/admin/add-user`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newUser),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        // Handle errors returned from FastAPI
+        throw new Error(result.detail || "Failed to add user");
+      }
+
+      alert(`✅ ${result.message}`);
+      console.log("User Created:", result.user);
+
+      // Reset form and generate a new user ID
+      setFormData({ name: "", email: "", password: "", role: "" });
+      setUserId(generateUserId());
+    } catch (error) {
+      console.error("Error adding user:", error);
+      alert(`❌ ${error.message}`);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -108,10 +142,8 @@ const NewUser = () => {
             onChange={handleChange}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
           >
-            <option value="">Select Role</option>
+            <option value="">Select role</option>
             <option value="Annotator">Annotator</option>
-            <option value="Reviewer">Reviewer</option>
-            <option value="Manager">Manager</option>
             <option value="Admin">Admin</option>
           </select>
         </div>
@@ -119,9 +151,12 @@ const NewUser = () => {
         {/* Submit */}
         <button
           type="submit"
-          className="w-full bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition duration-300"
+          disabled={loading}
+          className={`w-full ${
+            loading ? "bg-gray-400" : "bg-indigo-600 hover:bg-indigo-700"
+          } text-white py-2 rounded-lg font-medium transition duration-300`}
         >
-          Create User
+          {loading ? "Creating..." : "Create User"}
         </button>
       </form>
     </div>
