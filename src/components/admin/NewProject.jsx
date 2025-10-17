@@ -224,6 +224,7 @@ const NewProject = () => {
       console.log("Creating project:", projectData);
 
       // Step 1: Create project
+      console.log("the project data is ", projectData); 
       const projectResult = await createProject(projectData);
       console.log("Project created:", projectResult);
 

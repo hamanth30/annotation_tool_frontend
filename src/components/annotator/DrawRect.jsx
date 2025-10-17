@@ -144,6 +144,13 @@ export default function DrawRect({ width = 800, height = 600, onChange }) {
       <div style={{ border: "1px solid #ddd", display: "flex", justifyContent: "center", alignItems: "center" }}>
         <div style={{ display: "inline-block" }}>
           <div className="mt-2 font-bold text-lg text-center mb-2">Annotate images</div>
+          <img
+      src="https://intern-vista-work-space.s3.eu-north-1.amazonaws.com/annotation/newprjt/working_directory/assigned/5655520b0f3644a2b4830665d0a5ba2e.jpg"
+      alt="Test"
+      width={800}
+      height={600}
+      style={{ border: "1px solid gray", marginBottom: "10px" }}
+    />
           <Stage
             width={width}
             height={height}
