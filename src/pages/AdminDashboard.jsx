@@ -13,6 +13,7 @@ import { TbUsersPlus } from "react-icons/tb";
 import NewUser from "../components/admin/NewUser";
 import NewProject from "../components/admin/NewProject";
 import EditRole from "../components/admin/EditRole";
+import ViewProjects from "../components/admin/ViewProjects";
 
 const AdminDashboard = () => {
   const [active, setActive] = useState("dashboard");
@@ -83,12 +84,10 @@ const AdminDashboard = () => {
             <p className="text-gray-600">Form to create a new team goes here.</p>
           )}
           {active === "ongoingTeams" && (
-            <p className="text-gray-600">List of ongoing teams displayed here.</p>
+                <p className="text-gray-600">List of ongoing teams goes here.</p>
           )}
           {active === "ongoingProjects" && (
-            <p className="text-gray-600">
-              List of ongoing projects displayed here.
-            </p>
+            <ViewProjects/>
           )}
           {active === "editRole" && (
             <EditRole/>
