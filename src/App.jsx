@@ -2,10 +2,11 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Login from "./pages/login";
 import AdminDashboard from "./pages/AdminDashboard";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
-import DrawRect from "./components/annotator/DrawRect";
 import NewUser from "./components/admin/NewUser";
 import NewProject from "./components/admin/NewProject";
 import EditRole from "./components/admin/EditRole";
+import AnnotateFile from "./components/annotator/AnnotateFiles";
+import DrawRect from "./components/annotator/DrawRect";
 
 function App() {
   return (
@@ -24,9 +25,12 @@ function App() {
         <Route path="/admin/edit-role" element={<EditRole />} />
 
         {/* Annotator Components */}
+        <Route path="/employee/annotate/:project_id" element={<AnnotateFile />} />
         <Route path="/draw" element={<DrawRect />} />
       </Routes>
     </BrowserRouter>
+
+    //<EmployeeDashboard />
   );
 }
 
