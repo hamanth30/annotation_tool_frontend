@@ -28,14 +28,10 @@ export default function Login() {
         password: formData.password,
       };
 
-      // ✅ Backend API call
-      const res = await axios.post(
-        "http://127.0.0.1:8000/api/general/login",
-        loginData,
-        {
-          headers: { "Content-Type": "application/json" },
-        }
-      );
+      // ✅ Call FastAPI backend for login
+      const res = await axios.post("http://127.0.0.1:8000/api/general/login", loginData, {
+        headers: { "Content-Type": "application/json" },
+      });
 
       const token = res.data?.access_token;
       const tokenType = res.data?.token_type || "bearer";
@@ -46,19 +42,26 @@ export default function Login() {
       const decoded = jwtDecode(token);
       console.log("Decoded JWT:", decoded);
 
-      const userId = decoded.id;
-      const role = decoded.role;
+      // ✅ Extract fields from decoded token
+      // Adjust field names below based on your backend payload keys
+      const userId = decoded.user_id || decoded.id || decoded.sub;
+      const role = decoded.role || "employee";
+      const name = decoded.name || decoded.username || "";
 
-      // ✅ Save to localStorage
+      if (!userId) throw new Error("User ID missing in token");
+
+      // ✅ Store securely in localStorage for later use
       localStorage.setItem("token", token);
       localStorage.setItem("token_type", tokenType);
       localStorage.setItem("userId", userId);
       localStorage.setItem("role", role);
+      localStorage.setItem("name", name);
 
+      // ✅ Set default Authorization header
       axios.defaults.headers.common["Authorization"] = `Bearer ${token}`;
 
       // ✅ Redirect based on role
-      if (role === "admin") {
+      if (role.toLowerCase() === "admin") {
         navigate("/admin");
       } else {
         navigate("/employee");
@@ -66,8 +69,7 @@ export default function Login() {
     } catch (err) {
       console.error("Login error:", err);
       let message = "Login failed. Please check credentials.";
-      if (err.response?.status === 401)
-        message = "Invalid ID or password.";
+      if (err.response?.status === 401) message = "Invalid ID or password.";
       if (err.code === "ECONNREFUSED")
         message = "Backend not reachable. Start FastAPI server.";
       setError(message);

@@ -14,6 +14,7 @@ import NewUser from "../components/admin/NewUser";
 import NewProject from "../components/admin/NewProject";
 import EditRole from "../components/admin/EditRole";
 import ViewProjects from "../components/admin/ViewProjects";
+import RemoveUser from "../components/admin/removeuser";
 
 const AdminDashboard = () => {
   const [active, setActive] = useState("dashboard");
@@ -22,10 +23,7 @@ const AdminDashboard = () => {
     { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard size={20} /> },
     { id: "addUser", label: "Add New User", icon: <UserPlus size={20} /> },
     { id: "createProject", label: "Create New Project", icon: <FolderPlus size={20} /> },
-    { id: "createTeam", label: "Create New Team", icon: <TbUsersPlus size={20} /> },
-    { id: "ongoingTeams", label: "Ongoing Teams", icon: <Users size={20} /> },
     { id: "ongoingProjects", label: "Ongoing Projects", icon: <FolderOpen size={20} /> },
-    { id: "editRole", label: "Edit user role", icon: <TbUserEdit size={20} /> },
     { id: "removeUser", label: "Remove User", icon: <UserX size={20} /> },
     { id: "deleteProject", label: "Delete Project", icon: <FolderX size={20} /> },
   ];
@@ -94,9 +92,7 @@ const AdminDashboard = () => {
           )}
           
         
-          {active === "removeUser" && (
-            <p className="text-gray-600">Option to remove a user goes here.</p>
-          )}
+          
           {active === "deleteProject" && (
             <p className="text-gray-600">Option to delete a project goes here.</p>
           )}

@@ -143,7 +143,7 @@ const NewUser = () => {
             className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
           >
             <option value="">Select role</option>
-            <option value="Annotator">Annotator</option>
+            <option value="Employee">Employee</option>
             <option value="Admin">Admin</option>
           </select>
         </div>
