@@ -170,14 +170,6 @@ const NewProject = () => {
         annotators: annotators.filter(a => selectedAnnotators.includes(a.id)),
         images: uploadedImages.map(i => i.name),
       };
-<<<<<<< HEAD
-
-      console.log("Creating project:", projectData);
-
-      // Step 1: Create project
-      console.log("the project data is ", projectData); 
-=======
->>>>>>> 43443851ce521bbfe0415101fd79f210b844571a
       const projectResult = await createProject(projectData);
       if (projectData.annotators.length)
         await addProjectMembers(projectData.name, projectData.annotators);

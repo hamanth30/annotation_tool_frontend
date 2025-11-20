@@ -7,6 +7,7 @@ import {
   FolderX,
   UserX,
   LayoutDashboard,
+  BarChart3,
 } from "lucide-react";
 import { TbUserEdit } from "react-icons/tb";
 import { TbUsersPlus } from "react-icons/tb";
@@ -15,6 +16,7 @@ import NewProject from "../components/admin/NewProject";
 import EditRole from "../components/admin/EditRole";
 import ViewProjects from "../components/admin/ViewProjects";
 import RemoveUser from "../components/admin/removeuser";
+import ProjectAnalytics from "../components/admin/ProjectAnalytics";
 
 const AdminDashboard = () => {
   const [active, setActive] = useState("dashboard");
@@ -24,6 +26,7 @@ const AdminDashboard = () => {
     { id: "addUser", label: "Add New User", icon: <UserPlus size={20} /> },
     { id: "createProject", label: "Create New Project", icon: <FolderPlus size={20} /> },
     { id: "ongoingProjects", label: "Ongoing Projects", icon: <FolderOpen size={20} /> },
+    { id: "projectAnalytics", label: "Project Analytics", icon: <BarChart3 size={20} /> },
     { id: "removeUser", label: "Remove User", icon: <UserX size={20} /> },
     { id: "deleteProject", label: "Delete Project", icon: <FolderX size={20} /> },
   ];
@@ -86,6 +89,9 @@ const AdminDashboard = () => {
           )}
           {active === "ongoingProjects" && (
             <ViewProjects/>
+          )}
+          {active === "projectAnalytics" && (
+            <ProjectAnalytics/>
           )}
           {active === "editRole" && (
             <EditRole/>
