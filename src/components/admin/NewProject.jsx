@@ -188,18 +188,18 @@ const NewProject = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-8 mb-12">
-      <h2 className="text-3xl font-semibold text-indigo-600 mb-6 text-center">
+    <div className="max-w-5xl mx-auto">
+      <h2 className="text-3xl font-bold bg-gradient-to-r from-amber-400 to-yellow-600 bg-clip-text text-transparent mb-8 text-center">
         Create New Project
       </h2>
 
       {error && (
-        <div className="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg flex items-center">
+        <div className="mb-6 p-4 bg-red-900/30 border border-red-500/50 text-red-300 rounded-xl flex items-center backdrop-blur-sm">
           <X className="mr-2" size={20} /> {error}
         </div>
       )}
       {success && (
-        <div className="mb-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg flex items-center">
+        <div className="mb-6 p-4 bg-green-900/30 border border-green-500/50 text-green-300 rounded-xl flex items-center backdrop-blur-sm">
           <Check className="mr-2" size={20} /> {success}
         </div>
       )}
@@ -207,7 +207,7 @@ const NewProject = () => {
       {/* Project Details */}
       <div className="grid md:grid-cols-2 gap-6 mb-8">
         <div>
-          <label className="block text-gray-700 font-medium mb-2">
+          <label className="block text-amber-300 font-semibold mb-2">
             Project Name
           </label>
           <input
@@ -215,40 +215,40 @@ const NewProject = () => {
             value={projectName}
             onChange={(e) => setProjectName(e.target.value)}
             placeholder="Enter project name"
-            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-400 outline-none"
+            className="w-full bg-gray-800/50 border border-amber-500/30 rounded-xl px-4 py-3 text-amber-100 placeholder-amber-500/50 focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 outline-none transition-all"
           />
         </div>
         <div>
-          <label className="block text-gray-700 font-medium mb-2">
+          <label className="block text-amber-300 font-semibold mb-2">
             Bounding Box Type
           </label>
           <select
             value={boxType}
             onChange={(e) => setBoxType(e.target.value)}
-            className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-indigo-400 outline-none"
+            className="w-full bg-gray-800/50 border border-amber-500/30 rounded-xl px-4 py-3 text-amber-100 focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 outline-none transition-all"
           >
-            <option value="2D">2D</option>
-            <option value="3D">3D</option>
+            <option value="2D" className="bg-gray-800">2D</option>
+            <option value="3D" className="bg-gray-800">3D</option>
           </select>
         </div>
       </div>
 
       {/* Team Members */}
       <div className="mb-8">
-        <h3 className="text-xl font-semibold text-gray-800 mb-4">
+        <h3 className="text-xl font-semibold text-amber-300 mb-4">
           Add Team Members
         </h3>
         {loadingUsers ? (
-          <div className="flex items-center justify-center py-8">
+          <div className="flex items-center justify-center py-8 text-amber-300">
             <Loader2 className="animate-spin mr-2" size={20} />
             <span>Loading users...</span>
           </div>
         ) : annotators.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
+          <div className="text-center py-8 text-amber-400/70">
             <p>No users found.</p>
             <button
               onClick={fetchUsers}
-              className="mt-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+              className="mt-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-600 text-black rounded-xl hover:from-amber-400 hover:to-yellow-500 transition-all font-semibold"
             >
               Retry Loading Users
             </button>
@@ -259,22 +259,22 @@ const NewProject = () => {
               <div
                 key={user.id}
                 onClick={() => toggleAnnotator(user.id)}
-                className={`flex items-center p-4 border rounded-lg cursor-pointer transition ${
+                className={`flex items-center p-4 border rounded-xl cursor-pointer transition-all ${
                   selectedAnnotators.includes(user.id)
-                    ? "bg-indigo-100 border-indigo-500"
-                    : "bg-white hover:bg-gray-50"
+                    ? "bg-gradient-to-r from-amber-500/20 to-yellow-600/20 border-amber-500 shadow-lg shadow-amber-500/20"
+                    : "bg-gray-800/50 border-amber-500/30 hover:bg-gray-800/70 hover:border-amber-500/50"
                 }`}
               >
                 <input
                   type="checkbox"
                   checked={selectedAnnotators.includes(user.id)}
                   onChange={() => toggleAnnotator(user.id)}
-                  className="mr-3 h-5 w-5 accent-indigo-600 cursor-pointer"
+                  className="mr-3 h-5 w-5 accent-amber-500 cursor-pointer"
                 />
-                <User className="text-indigo-600 mr-3" />
+                <User className={`mr-3 ${selectedAnnotators.includes(user.id) ? "text-amber-400" : "text-amber-500/70"}`} />
                 <div>
-                  <p className="font-medium text-gray-800">{user.name}</p>
-                  <p className="text-sm text-gray-500">{user.email}</p>
+                  <p className={`font-medium ${selectedAnnotators.includes(user.id) ? "text-amber-200" : "text-amber-100"}`}>{user.name}</p>
+                  <p className={`text-sm ${selectedAnnotators.includes(user.id) ? "text-amber-300/80" : "text-amber-400/60"}`}>{user.email}</p>
                 </div>
               </div>
             ))}
@@ -284,7 +284,7 @@ const NewProject = () => {
 
       {/* Classes and Attributes */}
       <div className="mb-8">
-        <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+        <h3 className="text-xl font-semibold text-amber-300 mb-4 flex items-center gap-2">
           Classes & Attributes
         </h3>
 
@@ -295,11 +295,11 @@ const NewProject = () => {
             value={newClassName}
             onChange={(e) => setNewClassName(e.target.value)}
             placeholder="Enter class name"
-            className="border border-gray-300 rounded-lg px-4 py-2 w-64 focus:ring-2 focus:ring-indigo-400 outline-none"
+            className="bg-gray-800/50 border border-amber-500/30 rounded-xl px-4 py-2 w-64 text-amber-100 placeholder-amber-500/50 focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 outline-none transition-all"
           />
           <button
             onClick={handleAddClass}
-            className="px-3 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg"
+            className="px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-black rounded-xl font-semibold transition-all"
           >
             + Add Class
           </button>
@@ -307,12 +307,12 @@ const NewProject = () => {
 
         {/* Render Classes */}
         {classes.map((cls, index) => (
-          <div key={index} className="border rounded-lg p-4 mb-4 bg-gray-50">
+          <div key={index} className="border border-amber-500/30 rounded-xl p-4 mb-4 bg-gray-800/50 backdrop-blur-sm">
             <div className="flex justify-between items-center mb-2">
-              <h4 className="font-semibold text-indigo-700 text-lg">{cls.name}</h4>
+              <h4 className="font-semibold text-amber-300 text-lg">{cls.name}</h4>
               <button
                 onClick={() => handleRemoveClass(index)}
-                className="text-red-500 hover:text-red-700 font-medium"
+                className="text-red-400 hover:text-red-300 font-medium transition-colors"
               >
                 Remove
               </button>
@@ -324,26 +324,26 @@ const NewProject = () => {
                 {Object.entries(cls.attributes).map(([key, attr]) => (
                   <div
                     key={key}
-                    className="flex justify-between items-center mb-2 bg-white p-2 rounded-md border"
+                    className="flex justify-between items-center mb-2 bg-gray-900/50 p-3 rounded-lg border border-amber-500/20"
                   >
                     <div>
-                      <span className="font-medium text-gray-800">{key}</span>{" "}
-                      <span className="text-gray-500 text-sm">({attr.type})</span>
-                      <div className="text-xs text-gray-600">
+                      <span className="font-medium text-amber-200">{key}</span>{" "}
+                      <span className="text-amber-400/70 text-sm">({attr.type})</span>
+                      <div className="text-xs text-amber-300/80 mt-1">
                         Default:{" "}
-                        <span className="font-mono text-gray-700">
+                        <span className="font-mono text-amber-200">
                           {`${attr.default}`}
                         </span>
                       </div>
                       {attr.allowed_values && (
-                        <div className="text-xs text-gray-600">
+                        <div className="text-xs text-amber-300/80 mt-1">
                           Allowed: {attr.allowed_values.join(", ")}
                         </div>
                       )}
                     </div>
                     <button
                       onClick={() => handleRemoveAttribute(index, key)}
-                      className="text-red-500 hover:text-red-700 text-sm"
+                      className="text-red-400 hover:text-red-300 text-sm transition-colors"
                     >
                       Remove
                     </button>
@@ -351,14 +351,14 @@ const NewProject = () => {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-500 pl-4 mb-3">
+              <p className="text-sm text-amber-400/60 pl-4 mb-3">
                 No attributes added yet.
               </p>
             )}
 
             <button
               onClick={() => handleAddAttribute(index)}
-              className="ml-4 px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-md text-sm flex items-center gap-1"
+              className="ml-4 px-3 py-1.5 bg-gradient-to-r from-amber-500/80 to-yellow-600/80 hover:from-amber-500 hover:to-yellow-600 text-black rounded-lg text-sm flex items-center gap-1 font-semibold transition-all"
             >
               <PlusCircle size={14} /> Add Attribute
             </button>
@@ -368,15 +368,15 @@ const NewProject = () => {
 
       {/* Upload Images */}
       <div className="mb-8">
-        <h3 className="text-xl font-semibold text-gray-800 mb-4">
+        <h3 className="text-xl font-semibold text-amber-300 mb-4">
           Upload Images
         </h3>
         <label
           htmlFor="fileUpload"
-          className="flex flex-col items-center justify-center w-full border-2 border-dashed border-indigo-400 rounded-xl py-10 cursor-pointer hover:bg-indigo-50 transition"
+          className="flex flex-col items-center justify-center w-full border-2 border-dashed border-amber-500/50 rounded-xl py-10 cursor-pointer hover:bg-amber-500/10 hover:border-amber-500 transition-all bg-gray-800/30 backdrop-blur-sm"
         >
-          <UploadCloud className="text-indigo-500 mb-3" size={40} />
-          <span className="text-indigo-600 font-medium">
+          <UploadCloud className="text-amber-400 mb-3" size={40} />
+          <span className="text-amber-300 font-medium">
             Click or drag to upload images
           </span>
           <input
@@ -394,18 +394,18 @@ const NewProject = () => {
             {uploadedImages.map((img) => (
               <div
                 key={img.name}
-                className="flex justify-between items-center border rounded-lg px-4 py-2 bg-gray-50"
+                className="flex justify-between items-center border border-amber-500/30 rounded-xl px-4 py-3 bg-gray-800/50 backdrop-blur-sm"
               >
                 <div className="flex items-center gap-3">
                   <Eye
-                    className="text-indigo-500 cursor-pointer"
+                    className="text-amber-400 cursor-pointer hover:text-amber-300 transition-colors"
                     size={18}
                     onClick={() => window.open(img.url, "_blank")}
                   />
-                  <p className="text-gray-800">{img.name}</p>
+                  <p className="text-amber-200">{img.name}</p>
                 </div>
                 <Trash2
-                  className="text-red-500 cursor-pointer"
+                  className="text-red-400 cursor-pointer hover:text-red-300 transition-colors"
                   size={18}
                   onClick={() => removeImage(img.name)}
                 />
@@ -418,7 +418,7 @@ const NewProject = () => {
       {/* Footer */}
       <div className="flex justify-end gap-4 mt-10">
         <button
-          className="px-6 py-2 rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-100 transition"
+          className="px-6 py-3 rounded-xl border border-amber-500/30 text-amber-300 hover:bg-amber-500/10 hover:border-amber-500 transition-all font-semibold"
           disabled={isLoading}
         >
           Cancel
@@ -426,7 +426,7 @@ const NewProject = () => {
         <button
           onClick={handleCreate}
           disabled={isLoading}
-          className="px-6 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-black transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-bold shadow-lg shadow-amber-500/30"
         >
           {isLoading && <Loader2 className="animate-spin" size={16} />}
           {isLoading ? "Creating..." : "Create Project"}

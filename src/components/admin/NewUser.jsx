@@ -1,164 +1,181 @@
 import React, { useState, useEffect } from "react";
+import { UserPlus } from "lucide-react";
+import axios from "axios";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
-const API_BASE_URL = "http://localhost:8000"; // 👈 your backend base URL
+const API_BASE_URL = "http://localhost:8000/api/admin";
+
+const generateVISTAID = () => {
+  const randomDigits = Math.floor(1000 + Math.random() * 9000);
+  return `VISTA${randomDigits}`;
+};
 
 const NewUser = () => {
-  const [userId, setUserId] = useState("");
-  const [formData, setFormData] = useState({
+  const [form, setForm] = useState({
+    id: generateVISTAID(),
     name: "",
     email: "",
-    password: "",
     role: "",
+    password: "",
   });
+
   const [loading, setLoading] = useState(false);
 
-  // Auto-generate user ID like VISTAxxxx
-  const generateUserId = () => {
-    return "VISTA" + Math.floor(1000 + Math.random() * 9000);
-  };
-
-  useEffect(() => {
-    setUserId(generateUserId());
-  }, []);
-
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Form validation
-    if (!formData.name || !formData.email || !formData.password || !formData.role) {
-      alert("Please fill all the fields!");
+    if (!form.id || !form.name || !form.email || !form.role || !form.password) {
+      toast.error("Please fill all fields");
       return;
     }
 
-    const newUser = {
-      id: userId,
-      name: formData.name,
-      email: formData.email,
-      password: formData.password,
-      role: formData.role,
-      otp: null,
-      otpExpiry: null,
-    };
+    setLoading(true);
 
     try {
-      setLoading(true);
+      const userPayload = {
+        id: form.id,
+        name: form.name,
+        email: form.email,
+        role: form.role,
+        password: form.password,
+        otp: null,
+        otpExpiry: null,
+      };
 
-      const response = await fetch(`${API_BASE_URL}/api/admin/add-user`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(newUser),
+      await axios.post(`${API_BASE_URL}/add-user`, userPayload);
+
+      toast.success("User created successfully!");
+
+      // Reset form with new VISTA ID
+      setForm({
+        id: generateVISTAID(),
+        name: "",
+        email: "",
+        role: "",
+        password: "",
       });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        // Handle errors returned from FastAPI
-        throw new Error(result.detail || "Failed to add user");
-      }
-
-      alert(`✅ ${result.message}`);
-      console.log("User Created:", result.user);
-
-      // Reset form and generate a new user ID
-      setFormData({ name: "", email: "", password: "", role: "" });
-      setUserId(generateUserId());
     } catch (error) {
-      console.error("Error adding user:", error);
-      alert(`❌ ${error.message}`);
+      console.error("Error:", error);
+
+      if (error.response?.data?.detail) {
+        toast.error(error.response.data.detail);
+      } else {
+        toast.error("Failed to create user");
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-xl mt-15 mx-auto bg-white shadow-md rounded-xl p-6">
-      <h2 className="text-2xl font-semibold text-indigo-600 mb-6 text-center">
+    <div className="text-amber-100">
+      <ToastContainer />
+
+      <h1 className="text-4xl font-bold bg-gradient-to-r from-amber-400 to-yellow-600 bg-clip-text text-transparent mb-6 flex items-center gap-3">
+        <UserPlus className="text-amber-400" size={38} />
         Add New User
-      </h2>
+      </h1>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Auto-generated ID */}
-        <div>
-          <label className="block text-gray-600 font-medium mb-1">User ID</label>
-          <input
-            type="text"
-            value={userId}
-            readOnly
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 cursor-not-allowed"
-          />
-        </div>
+      <div className="bg-gradient-to-br from-gray-900/80 to-black/70 rounded-2xl p-8 border border-amber-500/20 shadow-xl">
+        <form className="space-y-6" onSubmit={handleSubmit}>
 
-        {/* Name */}
-        <div>
-          <label className="block text-gray-600 font-medium mb-1">Full Name</label>
-          <input
-            type="text"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            placeholder="Enter user's full name"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          />
-        </div>
+          {/* User ID */}
+          <div>
+            <label className="block mb-2 text-amber-300 font-medium tracking-wide">
+              Employee ID (Auto-Generated)
+            </label>
+            <input
+              type="text"
+              name="id"
+              value={form.id}
+              onChange={handleChange}
+              className="w-full px-4 py-3 rounded-xl bg-white text-black border border-amber-500/30 focus:ring-2 focus:ring-amber-500"
+            />
+          </div>
 
-        {/* Email */}
-        <div>
-          <label className="block text-gray-600 font-medium mb-1">Email Address</label>
-          <input
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            placeholder="Enter user's email"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          />
-        </div>
+          {/* Name */}
+          <div>
+            <label className="block mb-2 text-amber-300 font-medium tracking-wide">
+              Full Name
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={form.name}
+              onChange={handleChange}
+              placeholder="Enter full name"
+              className="w-full px-4 py-3 rounded-xl bg-white text-black border border-amber-500/30 focus:ring-2 focus:ring-amber-500"
+            />
+          </div>
 
-        {/* Password */}
-        <div>
-          <label className="block text-gray-600 font-medium mb-1">Password</label>
-          <input
-            type="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            placeholder="Enter a secure password"
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          />
-        </div>
+          {/* Email */}
+          <div>
+            <label className="block mb-2 text-amber-300 font-medium tracking-wide">
+              Email Address
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={form.email}
+              onChange={handleChange}
+              placeholder="Enter email"
+              className="w-full px-4 py-3 rounded-xl bg-white text-black border border-amber-500/30 focus:ring-2 focus:ring-amber-500"
+            />
+          </div>
 
-        {/* Role */}
-        <div>
-          <label className="block text-gray-600 font-medium mb-1">Role</label>
-          <select
-            name="role"
-            value={formData.role}
-            onChange={handleChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400"
-          >
-            <option value="">Select role</option>
-            <option value="Employee">Employee</option>
-            <option value="Admin">Admin</option>
-          </select>
-        </div>
+          {/* Role */}
+          <div>
+            <label className="block mb-2 text-amber-300 font-medium tracking-wide">
+              Select Role
+            </label>
+            <select
+              name="role"
+              value={form.role}
+              onChange={handleChange}
+              className="w-full px-4 py-3 rounded-xl bg-white text-black border border-amber-500/30 focus:ring-2 focus:ring-amber-500"
+            >
+              <option value="" disabled>
+                Choose a role
+              </option>
+              <option value="admin">Admin</option>
+              <option value="employee">Employee</option>
+            </select>
+          </div>
 
-        {/* Submit */}
-        <button
-          type="submit"
-          disabled={loading}
-          className={`w-full ${
-            loading ? "bg-gray-400" : "bg-indigo-600 hover:bg-indigo-700"
-          } text-white py-2 rounded-lg font-medium transition duration-300`}
-        >
-          {loading ? "Creating..." : "Create User"}
-        </button>
-      </form>
+          {/* Password */}
+          <div>
+            <label className="block mb-2 text-amber-300 font-medium tracking-wide">
+              Password
+            </label>
+            <input
+              type="password"
+              name="password"
+              value={form.password}
+              onChange={handleChange}
+              placeholder="Enter password"
+              className="w-full px-4 py-3 rounded-xl bg-white text-black border border-amber-500/30 focus:ring-2 focus:ring-amber-500"
+            />
+          </div>
+
+          {/* Submit Button */}
+          <div className="pt-4">
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-gradient-to-r from-amber-500 to-yellow-600 text-black font-semibold py-3 rounded-xl hover:shadow-xl hover:shadow-amber-500/30 transition-all duration-300 disabled:opacity-50"
+            >
+              {loading ? "Creating..." : "Create User"}
+            </button>
+          </div>
+
+        </form>
+      </div>
     </div>
   );
 };

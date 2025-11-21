@@ -13,12 +13,11 @@ const RandomAssignedFiles = () => {
   const [error, setError] = useState("");
   const [assigning, setAssigning] = useState(false);
 
-  // Fetch already assigned random files
+  // Fetch already assigned files
   useEffect(() => {
     const fetchFiles = async () => {
       try {
         setLoading(true);
-
         const response = await axios.get(
           `${API_BASE_URL}/api/employee/user/${employeeId}/assigned-files`
         );
@@ -39,27 +38,38 @@ const RandomAssignedFiles = () => {
     fetchFiles();
   }, [projectId, employeeId]);
 
-  // Get a fresh random file for this employee
-  const handleGetRandomFile = async () => {
-    try {
-      setAssigning(true);
+  // Request a new random file
+// Request a new random file
+const handleGetRandomFile = async () => {
+  try {
+    setAssigning(true);
 
-      const res = await axios.post(
-        `${API_BASE_URL}/api/employee/random-assign/${projectId}/${employeeId}`
-      );
+    const res = await axios.get(
+      `${API_BASE_URL}/api/employee/${projectId}/assign-file/${employeeId}`
+    );
 
-      const randomFile = res.data;
+    const assigned = res.data;
 
-      // Navigate directly to annotation screen
-      navigate(
-        `/employee/annotate/random/start/${projectId}/${randomFile.file_id}`
-      );
-    } catch (err) {
+    // Safely extract fileId regardless of backend key name
+    const extractedFileId =
+      assigned.file_id || assigned.fileId || assigned.id;
+
+    if (!extractedFileId) {
       alert("No more random files available for this project.");
-    } finally {
-      setAssigning(false);
+      return;
     }
-  };
+
+    // Navigate to annotation screen for that specific file
+    navigate(
+      `/employee/annotate/random/start/${projectId}/${extractedFileId}`
+    );
+  } catch (err) {
+    alert("No more random files available for this project.");
+  } finally {
+    setAssigning(false);
+  }
+};
+
 
   const handleStart = (fileId) => {
     navigate(`/employee/annotate/random/start/${projectId}/${fileId}`);
@@ -77,7 +87,7 @@ const RandomAssignedFiles = () => {
       <div className="text-center text-red-500 mt-10 font-medium">{error}</div>
     );
 
-  // If NO files → Show "Get Random File" button instead of table
+  // If NO files assigned yet
   if (files.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-[70vh]">
@@ -99,37 +109,26 @@ const RandomAssignedFiles = () => {
     );
   }
 
-  // Otherwise show table
   return (
     <div className="max-w-6xl mx-auto mt-12">
-      <div className="mb-8">
-        <h2 className="text-3xl font-semibold text-gray-800">
-          Random Assigned Files
-        </h2>
-        <p className="text-gray-500 mt-1 text-sm">
-          Project ID: <span className="font-medium">{projectId}</span>
-        </p>
-      </div>
+      <h2 className="text-3xl font-semibold mb-6">Random Assigned Files</h2>
 
       <div className="overflow-hidden bg-white shadow-xl rounded-2xl border border-gray-200">
         <table className="min-w-full border-collapse">
           <thead>
             <tr className="bg-gray-100 text-gray-700 text-sm uppercase tracking-wide">
-              <th className="px-6 py-4 text-left font-semibold">File ID</th>
-              <th className="px-6 py-4 text-left font-semibold">Filename</th>
-              <th className="px-6 py-4 text-left font-semibold">Assigned At</th>
-              <th className="px-6 py-4 text-left font-semibold">Status</th>
-              <th className="px-6 py-4 text-center font-semibold">Action</th>
+              <th className="px-6 py-4">File ID</th>
+              <th className="px-6 py-4">Filename</th>
+              <th className="px-6 py-4">Assigned At</th>
+              <th className="px-6 py-4">Status</th>
+              <th className="px-6 py-4 text-center">Action</th>
             </tr>
           </thead>
 
           <tbody className="divide-y divide-gray-200">
             {files.map((file) => (
-              <tr
-                key={file.file_id}
-                className="hover:bg-gray-50 transition-colors"
-              >
-                <td className="px-6 py-4 text-gray-700">{file.file_id}</td>
+              <tr key={file.file_id} className="hover:bg-gray-50">
+                <td className="px-6 py-4">{file.file_id}</td>
 
                 <td className="px-6 py-4">
                   <a
@@ -142,7 +141,7 @@ const RandomAssignedFiles = () => {
                   </a>
                 </td>
 
-                <td className="px-6 py-4 text-gray-600">
+                <td className="px-6 py-4">
                   {new Date(file.assigned_at).toLocaleString()}
                 </td>
 

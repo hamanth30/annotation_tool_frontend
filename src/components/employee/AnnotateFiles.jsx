@@ -2,103 +2,155 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import DrawRect from "./DrawRect";
 import { useParams, useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 const API_BASE_URL = "http://localhost:8000";
+// Developer-provided local image (used only as a fallback for testing)
+const FALLBACK_IMAGE = "/mnt/data/54dd16f9-f2e8-4a23-a945-cbcafe3c7d6f.png";
 
 export default function AnnotateFile() {
-  const { project_id } = useParams();
+  // route params: project_id required; file_id optional when resuming
+  const { project_id, file_id } = useParams();
   const navigate = useNavigate();
-
-  const [imageUrl, setImageUrl] = useState("");
-  const [fileId, setFileId] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [classes, setClasses] = useState([]);
-  const [rectData, setRectData] = useState([]);
-  const [isSaving, setIsSaving] = useState(false);
 
   const token = localStorage.getItem("token");
   const user_id = localStorage.getItem("userId");
 
-  // ✅ Fetch random file from backend
-  useEffect(() => {
-    const fetchRandomFile = async () => {
-      try {
-        setLoading(true);
-        const res = await axios.get(
-          `${API_BASE_URL}/api/employee/${project_id}/assign-file/${user_id}`,
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
+  const [imageUrl, setImageUrl] = useState("");
+  const [fileId, setFileId] = useState(null);
+  const [rectData, setRectData] = useState([]); // each rect: { id, x, y, width, height, classes: { className, attribute } }
+  const [classes, setClasses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState("");
 
-        if (res.data?.file_url) {
-          setImageUrl(res.data.file_url);
-          setFileId(res.data.file_id); // backend must return file_id
+  // Helper: get assigned-files for user and return the matched file object (or null)
+  const findAssignedFile = async (targetFileId) => {
+    try {
+      const res = await axios.get(
+        `${API_BASE_URL}/api/employee/user/${user_id}/assigned-files`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (!Array.isArray(res.data)) return null;
+      const found = res.data.find((f) => String(f.file_id) === String(targetFileId));
+      return found || null;
+    } catch (err) {
+      console.error("Failed to fetch user's assigned-files:", err);
+      return null;
+    }
+  };
+
+  // 1) Load either the exact assigned file (if file_id param exists) OR request a new random file
+  useEffect(() => {
+    const loadFile = async () => {
+      setLoading(true);
+      setError("");
+
+      try {
+        if (file_id) {
+          // --- RESUME: load the exact assigned file (do NOT call assign-file endpoint) ---
+          const assigned = await findAssignedFile(file_id);
+
+          if (!assigned) {
+            setError("Assigned file not found for this user. It might be moved/removed.");
+            setLoading(false);
+            return;
+          }
+
+          setImageUrl(assigned.object_url || assigned.file_url || "");
+          setFileId(assigned.file_id);
         } else {
-          setError("No image available for annotation.");
+          // --- NEW: request a random file (this will assign it in backend) ---
+          const res = await axios.get(
+            `${API_BASE_URL}/api/employee/${project_id}/assign-file/${user_id}`,
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+
+          if (res.data?.file_url) {
+            setImageUrl(res.data.file_url);
+            setFileId(res.data.file_id);
+          } else {
+            // fallback: use local test image if you want
+            console.warn("No image URL returned from assign-file endpoint — using fallback (dev).");
+            setError("Failed to fetch file URL. The assigned-file endpoint returned empty URL.");
+            setFileId(res.data?.file_id || null);
+            return;
+          }
         }
       } catch (err) {
-        console.error("Error fetching image:", err);
-        setError("Failed to load image.");
+        console.error("Error loading file:", err);
+        setError("Failed to load file. See console.");
       } finally {
         setLoading(false);
       }
     };
-    fetchRandomFile();
-  }, [project_id, token, user_id]);
 
-  // ✅ Fetch project classes (updated endpoint)
+    if (!project_id || !user_id) {
+      setError("Missing project or user info.");
+      setLoading(false);
+      return;
+    }
+
+    loadFile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project_id, file_id, user_id, token]);
+
+  // 2) Load project classes (for sidebar)
   useEffect(() => {
     const fetchClasses = async () => {
       try {
         const res = await axios.get(
-          `${API_BASE_URL}/api/employee/projects/${project_id}/classes`
+          `${API_BASE_URL}/api/employee/projects/${project_id}/classes`,
+          { headers: { Authorization: `Bearer ${token}` } }
         );
-        console.log("Fetched classes:", res.data);
-        setClasses(res.data || []);
+        let data = res.data;
+        if (typeof data === "string") {
+          try {
+            data = JSON.parse(data);
+          } catch (e) {
+            console.error("Project classes JSON parse error:", e);
+          }
+        }
+        setClasses(data || []);
       } catch (err) {
-        console.error("Error fetching classes:", err);
+        console.error("Failed to load classes", err);
       }
     };
-    fetchClasses();
-  }, [project_id]);
 
-  // ✅ Handle drawn rectangles
- const handleRectChange = (rects) => {
-  const updatedRects = rects.map((r, index) => {
-    const existing = rectData[index];
-    return {
+    if (project_id) fetchClasses();
+  }, [project_id, token]);
+
+  // 3) Receive rects from DrawRect (controlled)
+  const handleRectChange = (rects) => {
+    // rects come from DrawRect and already include id and geometry
+    // ensure each rect has classes field
+    const normalized = rects.map((r) => ({
       ...r,
-      classes: existing?.classes || { className: "", attribute: "" },
-    };
-  });
-  setRectData(updatedRects);
-};
-
-  // ✅ Update class per box
-const handleClassChange = (index, value) => {
-  const updated = [...rectData];
-  updated[index].classes = {
-    ...updated[index].classes,
-    className: value,
-    attribute: "", // reset attribute
+      classes: r.classes || { className: "", attribute: "" },
+    }));
+    setRectData(normalized);
   };
-  setRectData(updated);
-};
 
-  // ✅ Update attribute per box
-const handleAttributeChange = (index, value) => {
-  const updated = [...rectData];
-  updated[index].classes = {
-    ...updated[index].classes,
-    attribute: value,
+  // class/attribute handlers (by id)
+  const handleClassChange = (id, value) => {
+    setRectData((prev) =>
+      prev.map((r) =>
+        String(r.id) === String(id) ? { ...r, classes: { className: value, attribute: "" } } : r
+      )
+    );
   };
-  setRectData(updated);
-};
+  const handleAttributeChange = (id, value) => {
+    setRectData((prev) =>
+      prev.map((r) =>
+        String(r.id) === String(id) ? { ...r, classes: { ...(r.classes || {}), attribute: value } } : r
+      )
+    );
+  };
 
-  // ✅ Save annotation data to backend
- const handleSaveAnnotation = async () => {
+  // 4) Save annotation (PUT)
+const handleSaveAnnotation = async () => {
   if (!fileId) {
-    alert("File ID missing — please reload the page.");
+    toast.error("File ID missing.");
     return;
   }
 
@@ -106,141 +158,209 @@ const handleAttributeChange = (index, value) => {
     setIsSaving(true);
 
     const payload = {
-      data: rectData.map((box) => ({
-        id: String(box.id),
-        x: box.x,
-        y: box.y,
-        width: box.width,
-        height: box.height,
+      data: rectData.map((b) => ({
+        id: String(b.id),
+        x: Number(b.x),
+        y: Number(b.y),
+        width: Number(b.width),
+        height: Number(b.height),
         classes: {
-          className: box.classes?.className || "",
-          attribute: box.classes?.attribute || "",
-        },
-      })),
+          className: b.classes?.className || "",
+          attribute: b.classes?.attribute || ""
+        }
+      }))
     };
 
-    console.log("Saving annotation payload:", payload);
-
-    const res = await axios.put(
+    await axios.put(
       `${API_BASE_URL}/api/employee/save_annotation/${fileId}`,
-      payload
+      payload,
+      {
+        headers: { 
+          Authorization: `Bearer ${token}`, 
+          "Content-Type": "application/json" 
+        }
+      }
     );
 
-    alert("✅ " + res.data.message);
-    console.log("Last saved at:", res.data.last_saved_at);
+    toast.success("Saved!");
   } catch (err) {
-    console.error("Error saving annotation:", err);
-    alert("Error saving annotation data. Check console.");
+    console.error("Save failed:", err);
+    toast.error("Save failed.");
   } finally {
     setIsSaving(false);
   }
 };
 
-  const handleBack = () => navigate(-1);
 
-  if (loading)
-    return (
-      <div className="flex justify-center items-center h-screen text-gray-500">
-        Loading image...
-      </div>
+  // 5) Submit
+const handleSubmitAnnotation = async () => {
+  if (rectData.length === 0) {
+    toast.warning("Draw at least one box before submitting.");
+    return;
+  }
+
+  if (!window.confirm("Submit annotation for review?")) return;
+
+  try {
+    const payload = {
+      project_id: project_id,   // UUID → string (CORRECT)
+      file_id: Number(fileId),
+      user_id: user_id          // string (CORRECT)
+    };
+
+    await axios.post(
+      `${API_BASE_URL}/api/employee/submit`,
+      payload,
+      {
+        headers: { 
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        }
+      }
     );
 
+    toast.success("Submitted!");
+    setTimeout(() => navigate("/employee"), 700);
+
+  } catch (err) {
+    console.error("Submit failed:", err);
+    toast.error("Submit failed. Check console.");
+  }
+};
+
+
+  // Delete by id (updates both canvas and sidebar)
+  const handleDeleteRect = (id) => {
+    setRectData((prev) => prev.filter((r) => String(r.id) !== String(id)));
+    // propagate change to DrawRect by calling onChange (DrawRect is controlled)
+    // (handleRectChange will be called when rectData prop updates,
+    // but to be explicit, we can also call handleRectChange with new value)
+    toast?.info ? toast.info("Box removed") : null;
+  };
+
+  // UI
+  if (loading) return <div className="flex justify-center h-screen">Loading…</div>;
   if (error)
     return (
-      <div className="text-center text-red-500 mt-10 font-medium">{error}</div>
+      <div className="text-center text-red-500 mt-10 font-medium">
+        {error}
+      </div>
+    );
+  if (!imageUrl)
+    return (
+      <div className="text-center text-red-500 mt-10 font-medium">
+        No image to display.
+      </div>
     );
 
   return (
     <div className="flex flex-row p-4 gap-4">
-      {/* Left: Canvas */}
+      {/* Canvas */}
       <div className="flex flex-col items-center">
-        <button
-          onClick={handleBack}
-          className="self-start mb-4 bg-gray-300 text-gray-800 px-4 py-2 rounded hover:bg-gray-400 transition"
-        >
+        <button onClick={() => navigate(-1)} className="self-start mb-4 bg-gray-300 px-4 py-2 rounded">
           ← Back
         </button>
+        <h2 className="text-2xl font-semibold text-indigo-600 mb-4">Annotating Project #{project_id}</h2>
 
-        <h2 className="text-2xl font-semibold text-indigo-600 mb-4">
-          Annotating Project #{project_id}
-        </h2>
+        <DrawRect
+          width={800}
+          height={600}
+          imageUrl={imageUrl}
+          rectData={rectData}
+          onChange={handleRectChange}
+        />
 
-        {imageUrl ? (
-          <DrawRect
-            width={800}
-            height={600}
-            imageUrl={imageUrl}
-            onChange={handleRectChange}
-          />
-        ) : (
-          <p className="text-gray-500">No image available for annotation.</p>
-        )}
+        <div className="mt-6 w-full max-w-3xl">
+  <h3 className="text-xl font-semibold text-gray-800 mb-3">
+    Annotation Details
+  </h3>
 
-        {/* ✅ Save Button */}
-        <button
-          onClick={handleSaveAnnotation}
-          disabled={isSaving}
-          className="mt-4 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700"
-        >
-          {isSaving ? "Saving..." : "💾 Save for Review"}
-        </button>
+  {rectData.length === 0 ? (
+    <p className="text-gray-500 text-sm">No boxes drawn yet.</p>
+  ) : (
+    <div className="overflow-hidden rounded-xl border border-gray-200 shadow-md">
+      <table className="min-w-full text-sm text-left">
+        <thead className="bg-gray-100 text-gray-700 font-semibold">
+          <tr>
+            <th className="px-4 py-3">ID</th>
+            <th className="px-4 py-3">X</th>
+            <th className="px-4 py-3">Y</th>
+            <th className="px-4 py-3">Width</th>
+            <th className="px-4 py-3">Height</th>
+            <th className="px-4 py-3">Class</th>
+            <th className="px-4 py-3">Attribute</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-200">
+          {rectData.map((box, index) => (
+            <tr
+              key={box.id}
+              className={`${
+                index % 2 === 0 ? "bg-white" : "bg-gray-50"
+              } hover:bg-indigo-50 transition`}
+            >
+              <td className="px-4 py-3 font-medium text-gray-800">
+                {index + 1}
+              </td>
+              <td className="px-4 py-3 text-gray-700">{box.x.toFixed(1)}</td>
+              <td className="px-4 py-3 text-gray-700">{box.y.toFixed(1)}</td>
+              <td className="px-4 py-3 text-gray-700">{box.width.toFixed(1)}</td>
+              <td className="px-4 py-3 text-gray-700">{box.height.toFixed(1)}</td>
+              <td className="px-4 py-3 font-semibold text-indigo-700">
+                {box.classes?.className || "-"}
+              </td>
+              <td className="px-4 py-3 text-indigo-600">
+                {box.classes?.attribute || "-"}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )}
+</div>
+
+        <div className="mt-4 space-x-2">
+          <button onClick={handleSaveAnnotation} disabled={isSaving} className="bg-green-600 text-white px-4 py-2 rounded">
+            {isSaving ? "Saving…" : "💾 Save for Review"}
+          </button>
+          <button onClick={handleSubmitAnnotation} className={`px-4 py-2 rounded text-white ${rectData.length === 0 ? "bg-blue-300" : "bg-blue-600 hover:bg-blue-700"}`}>
+            Submit Annotation
+          </button>
+        </div>
       </div>
 
-      {/* Right: Sidebar */}
+      {/* Sidebar */}
       <div className="w-80 bg-gray-50 p-4 rounded-lg shadow-md overflow-auto">
-        <h3 className="text-lg font-semibold mb-2 text-gray-700">
-          Annotation Details
-        </h3>
-
+        <h3 className="text-lg font-semibold mb-2">Box Settings</h3>
         {rectData.length === 0 ? (
-          <p className="text-gray-500 text-sm">
-            Draw a box to start annotating.
-          </p>
+          <p className="text-gray-500 text-sm">Draw a box to start.</p>
         ) : (
-          rectData.map((rect, index) => {
-            const currentClass = classes.find(
-              (c) => c.name === rect.className
-            );
-            const attributes =
-              currentClass?.attributes?.color?.allowed_values || [];
-
+          rectData.map((rect) => {
+            const cls = classes.find((c) => c.name === rect.classes?.className);
+            const attributes = cls?.attributes?.color?.allowed_values || [];
             return (
-              <div key={index} className="mb-3 border-b pb-2">
-                <div className="text-sm font-medium text-gray-600 mb-1">
-                  Box {index + 1} ({Math.round(rect.x)}, {Math.round(rect.y)})
-                </div>
+              <div key={rect.id} className="mb-3 border-b pb-3 relative">
+                <button onClick={() => handleDeleteRect(rect.id)} className="absolute top-0 right-0 text-red-500">✕</button>
+                <div className="text-sm font-medium mb-2">Box {rectData.findIndex(r => String(r.id) === String(rect.id)) + 1}</div>
 
-                {/* Class Dropdown */}
                 <select
                   className="border rounded p-1 w-full mb-2"
-                  value={rect.className}
-                  onChange={(e) =>
-                    handleClassChange(index, e.target.value)
-                  }
+                  value={rect.classes?.className || ""}
+                  onChange={(e) => handleClassChange(rect.id, e.target.value)}
                 >
                   <option value="">Select class</option>
-                  {classes.map((cls) => (
-                    <option key={cls.name} value={cls.name}>
-                      {cls.name}
-                    </option>
-                  ))}
+                  {classes.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}
                 </select>
 
-                {/* Attribute Dropdown */}
                 {attributes.length > 0 && (
                   <select
                     className="border rounded p-1 w-full"
-                    value={rect.attribute}
-                    onChange={(e) =>
-                      handleAttributeChange(index, e.target.value)
-                    }
+                    value={rect.classes?.attribute || ""}
+                    onChange={(e) => handleAttributeChange(rect.id, e.target.value)}
                   >
                     <option value="">Select attribute</option>
-                    {attributes.map((attr) => (
-                      <option key={attr} value={attr}>
-                        {attr}
-                      </option>
-                    ))}
+                    {attributes.map((a) => <option key={a} value={a}>{a}</option>)}
                   </select>
                 )}
               </div>

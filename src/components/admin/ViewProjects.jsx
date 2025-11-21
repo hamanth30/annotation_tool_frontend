@@ -60,15 +60,18 @@ const ViewProjects = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen text-gray-500">
-        Loading projects...
+      <div className="flex justify-center items-center h-screen text-amber-300">
+        <div className="flex items-center gap-3">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-500"></div>
+          <span>Loading projects...</span>
+        </div>
       </div>
     );
   }
 
   if (projects.length === 0) {
     return (
-      <div className="text-center text-gray-600 mt-10">No projects found.</div>
+      <div className="text-center text-amber-400/70 mt-10 text-lg">No projects found.</div>
     );
   }
 
@@ -82,8 +85,8 @@ const ViewProjects = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto mt-10 space-y-4 w-full">
-      <h2 className="text-3xl font-bold text-indigo-600 text-center mb-6">
+    <div className="max-w-7xl mx-auto space-y-4 w-full">
+      <h2 className="text-3xl font-bold bg-gradient-to-r from-amber-400 to-yellow-600 bg-clip-text text-transparent text-center mb-8">
         All Projects
       </h2>
 
@@ -93,32 +96,32 @@ const ViewProjects = () => {
         return (
           <div
             key={project.id}
-            className="bg-white shadow-md rounded-lg border border-gray-200 p-4 flex flex-col hover:shadow-lg transition-shadow duration-200"
+            className="bg-gradient-to-br from-gray-900/80 to-black/80 shadow-xl rounded-xl border border-amber-500/30 p-6 flex flex-col hover:shadow-2xl hover:border-amber-500/50 transition-all duration-300 backdrop-blur-sm"
           >
             <div className="flex justify-between items-center">
               <div>
-                <h3 className="text-xl font-semibold text-gray-800">
+                <h3 className="text-xl font-semibold text-amber-200 mb-1">
                   {project.name}
                 </h3>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-amber-400/70">
                   Project ID: {project.id}
                 </p>
               </div>
 
               <button
                 onClick={() => toggleDetails(project.id)}
-                className="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 transition duration-200"
+                className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-black px-5 py-2.5 rounded-xl transition-all duration-200 font-semibold shadow-lg shadow-amber-500/30"
               >
                 {expandedProject === project.id ? "Hide Actions" : "View Actions"}
               </button>
             </div>
 
             {expandedProject === project.id && (
-              <div className="mt-4 border-t border-gray-200 pt-4 text-gray-700 space-y-3">
+              <div className="mt-4 border-t border-amber-500/30 pt-4 space-y-3">
                 <div className="flex flex-nowrap gap-3 overflow-x-auto pb-2">
                   <button
                     onClick={() => handleViewMore(project.id)}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition duration-200"
+                    className="bg-gradient-to-r from-amber-500/80 to-yellow-600/80 hover:from-amber-500 hover:to-yellow-600 text-black px-4 py-2 rounded-xl transition-all duration-200 font-semibold whitespace-nowrap shadow-md shadow-amber-500/20"
                   >
                     {viewMoreProject === project.id
                       ? "Hide Details"
@@ -126,48 +129,48 @@ const ViewProjects = () => {
                   </button>
 
                   <button onClick={() => handleAddUser(project)}
-                  className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition duration-200">
+                  className="bg-gradient-to-r from-emerald-600/80 to-green-600/80 hover:from-emerald-500 hover:to-green-500 text-white px-4 py-2 rounded-xl transition-all duration-200 font-semibold whitespace-nowrap shadow-md shadow-emerald-500/20">
                     Add User
                   </button>
 
                   <button  onClick={() => handleRemoveUser(project)}
-                  className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 transition duration-200">
+                  className="bg-gradient-to-r from-red-600/80 to-red-700/80 hover:from-red-500 hover:to-red-600 text-white px-4 py-2 rounded-xl transition-all duration-200 font-semibold whitespace-nowrap shadow-md shadow-red-500/20">
                     Remove User
                   </button>
 
                   <button
                     onClick={() => handleAssignFile(project)}
-                    className="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700 transition duration-200"
+                    className="bg-gradient-to-r from-purple-600/80 to-purple-700/80 hover:from-purple-500 hover:to-purple-600 text-white px-4 py-2 rounded-xl transition-all duration-200 font-semibold whitespace-nowrap shadow-md shadow-purple-500/20"
                   >
                     Assign File to Annotators
                   </button>
 
                   <button onClick={() => handlePromoteReviewer(project)}
-                  className="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition duration-200">
+                  className="bg-gradient-to-r from-yellow-500/80 to-amber-600/80 hover:from-yellow-400 hover:to-amber-500 text-black px-4 py-2 rounded-xl transition-all duration-200 font-semibold whitespace-nowrap shadow-md shadow-yellow-500/20">
                     Promote Reviewers
                   </button>
 
                   <button onClick={() => handleAssignFileReviewer(project)}
-                  className="bg-orange-600 text-white px-4 py-2 rounded-md hover:bg-orange-700 transition duration-200">
+                  className="bg-gradient-to-r from-orange-600/80 to-orange-700/80 hover:from-orange-500 hover:to-orange-600 text-white px-4 py-2 rounded-xl transition-all duration-200 font-semibold whitespace-nowrap shadow-md shadow-orange-500/20">
                     Assign File to Reviewers
                   </button>
                 </div>
 
                 {viewMoreProject === project.id && (
-                  <div className="mt-3 border-t border-gray-100 pt-3 space-y-2">
+                  <div className="mt-3 border-t border-amber-500/20 pt-3 space-y-3 bg-gray-900/30 rounded-lg p-4">
                     <p>
-                      <span className="font-medium text-gray-800">Description:</span>{" "}
-                      {project.description || "No description available."}
+                      <span className="font-semibold text-amber-300">Description:</span>{" "}
+                      <span className="text-amber-200/90">{project.description || "No description available."}</span>
                     </p>
 
                     <div>
-                      <span className="font-medium text-gray-800">Classes:</span>
+                      <span className="font-semibold text-amber-300">Classes:</span>
                       {classList.length === 0 ? (
-                        <p className="text-gray-600">None</p>
+                        <p className="text-amber-400/70 ml-2">None</p>
                       ) : (
-                        <ul className="list-disc ml-6 mt-1">
+                        <ul className="list-disc ml-6 mt-2 space-y-1">
                           {classList.map((cls, idx) => (
-                            <li key={idx} className="text-gray-800">
+                            <li key={idx} className="text-amber-200">
                               {cls.name}
                             </li>
                           ))}
@@ -176,13 +179,13 @@ const ViewProjects = () => {
                     </div>
 
                     <p>
-                      <span className="font-medium text-gray-800">Created At:</span>{" "}
-                      {new Date(project.created_at).toLocaleString()}
+                      <span className="font-semibold text-amber-300">Created At:</span>{" "}
+                      <span className="text-amber-200/90">{new Date(project.created_at).toLocaleString()}</span>
                     </p>
 
                     <p>
-                      <span className="font-medium text-gray-800">Updated At:</span>{" "}
-                      {new Date(project.updated_at).toLocaleString()}
+                      <span className="font-semibold text-amber-300">Updated At:</span>{" "}
+                      <span className="text-amber-200/90">{new Date(project.updated_at).toLocaleString()}</span>
                     </p>
                   </div>
                 )}
