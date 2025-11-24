@@ -1,8 +1,22 @@
 import React, { useState } from "react";
+import {
+  UserPlus,
+  Users,
+  FolderPlus,
+  FolderOpen,
+  FolderX,
+  UserX,
+  LayoutDashboard,
+  BarChart3,
+} from "lucide-react";
+import { TbUserEdit } from "react-icons/tb";
+import { TbUsersPlus } from "react-icons/tb";
 import NewUser from "../components/admin/NewUser";
 import NewProject from "../components/admin/NewProject";
 import ViewProjects from "../components/admin/ViewProjects";
 import RemoveUser from "../components/admin/removeuser";
+import ProjectAnalytics from "../components/admin/ProjectAnalytics";
+import EditRole from "../components/admin/EditRole";
 
 // Custom SVG Icons
 const LayoutDashboard = ({ size = 20 }) => (
@@ -63,7 +77,12 @@ const AdminDashboard = () => {
     { id: "addUser", label: "Add New User", icon: <UserPlus size={20} /> },
     { id: "createProject", label: "Create New Project", icon: <FolderPlus size={20} /> },
     { id: "ongoingProjects", label: "Ongoing Projects", icon: <FolderOpen size={20} /> },
+
     // { id: "removeUser", label: "Remove User", icon: <UserX size={20} /> },
+
+    { id: "projectAnalytics", label: "Project Analytics", icon: <BarChart3 size={20} /> },
+    { id: "removeUser", label: "Remove User", icon: <UserX size={20} /> },
+
     { id: "deleteProject", label: "Delete Project", icon: <FolderX size={20} /> },
   ];
 
@@ -123,10 +142,37 @@ const AdminDashboard = () => {
             <h1 className="text-amber-100 text-3xl">Dashboard</h1>
           )}
 
+
           {active === "addUser" && <NewUser />}
           {active === "createProject" && <NewProject />}
           {active === "ongoingProjects" && <ViewProjects />}
           {active === "removeUser" && <RemoveUser />}
+
+
+          {active === "addUser" && (
+            <NewUser/>
+          )}
+          {active === "createProject" && (
+            <NewProject/>
+          )}
+          {active === "createTeam" && (
+            <p className="text-gray-600">Form to create a new team goes here.</p>
+          )}
+          {active === "ongoingTeams" && (
+                <p className="text-gray-600">List of ongoing teams goes here.</p>
+          )}
+          {active === "ongoingProjects" && (
+            <ViewProjects/>
+          )}
+          {active === "projectAnalytics" && (
+            <ProjectAnalytics/>
+          )}
+          {active === "editRole" && (
+            <EditRole/>
+          )}
+          
+        
+          
 
           {active === "deleteProject" && (
             <div>
