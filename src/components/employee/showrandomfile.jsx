@@ -110,8 +110,11 @@ const handleGetRandomFile = async () => {
   }
 
   return (
-    <div className="max-w-6xl mx-auto mt-12">
-      <h2 className="text-3xl font-semibold mb-6">Random Assigned Files</h2>
+    <div className="max-w-6xl mx-auto mt-12 space-y-1">
+      <h2 className="text-3xl text-green-700 font-semibold mb-6">Randomly Assigned incompleted Files</h2>
+      <div className="">
+          <h2 className="text-red-600 mb-6">Complete all these files to get a new ranadom file</h2>
+      </div>
 
       <div className="overflow-hidden bg-white shadow-xl rounded-2xl border border-gray-200">
         <table className="min-w-full border-collapse">

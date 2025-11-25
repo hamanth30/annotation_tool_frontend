@@ -1,16 +1,6 @@
-import React, { useState } from "react";
-import {
-  UserPlus,
-  Users,
-  FolderPlus,
-  FolderOpen,
-  FolderX,
-  UserX,
-  LayoutDashboard,
-  BarChart3,
-} from "lucide-react";
-import { TbUserEdit } from "react-icons/tb";
-import { TbUsersPlus } from "react-icons/tb";
+import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import { BarChart3 } from "lucide-react";
 import NewUser from "../components/admin/NewUser";
 import NewProject from "../components/admin/NewProject";
 import ViewProjects from "../components/admin/ViewProjects";
@@ -69,8 +59,18 @@ const FolderX = ({ size = 20 }) => (
 );
 
 const AdminDashboard = () => {
+  const location = useLocation();
   const [active, setActive] = useState("dashboard");
   const [isOpen, setIsOpen] = useState(true);
+
+  // Check if location state has activeView and set it
+  useEffect(() => {
+    if (location.state?.activeView) {
+      setActive(location.state.activeView);
+      // Clear the state to prevent it from persisting on refresh
+      window.history.replaceState({}, document.title);
+    }
+  }, [location.state]);
 
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard size={20} /> },
@@ -142,38 +142,12 @@ const AdminDashboard = () => {
             <h1 className="text-amber-100 text-3xl">Dashboard</h1>
           )}
 
-
           {active === "addUser" && <NewUser />}
           {active === "createProject" && <NewProject />}
           {active === "ongoingProjects" && <ViewProjects />}
           {active === "removeUser" && <RemoveUser />}
-
-
-          {active === "addUser" && (
-            <NewUser/>
-          )}
-          {active === "createProject" && (
-            <NewProject/>
-          )}
-          {active === "createTeam" && (
-            <p className="text-gray-600">Form to create a new team goes here.</p>
-          )}
-          {active === "ongoingTeams" && (
-                <p className="text-gray-600">List of ongoing teams goes here.</p>
-          )}
-          {active === "ongoingProjects" && (
-            <ViewProjects/>
-          )}
-          {active === "projectAnalytics" && (
-            <ProjectAnalytics/>
-          )}
-          {active === "editRole" && (
-            <EditRole/>
-          )}
-          
-        
-          
-
+          {active === "projectAnalytics" && <ProjectAnalytics />}
+          {active === "editRole" && <EditRole />}
           {active === "deleteProject" && (
             <div>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-400 to-yellow-600 bg-clip-text text-transparent mb-4">

@@ -20,6 +20,7 @@ import PromoteReviewer from "./components/admin/promotereviewer";
 import ProjectEditors from "./components/admin/available_reviewer";
 import AssignedAdminFiles from "./components/employee/showadminfiles";
 import RandomAssignedFiles from "./components/employee/showrandomfile";
+import ProjectAnalytics from "./components/admin/ProjectAnalytics";
 
 function App() {
   return (
@@ -52,6 +53,8 @@ function App() {
           <Route path="/employee/randomfiles/:projectId/:employeeId" element={<RandomAssignedFiles />} />
         </Routes>
       </BrowserRouter>
+
+
     </>
   );
 }
