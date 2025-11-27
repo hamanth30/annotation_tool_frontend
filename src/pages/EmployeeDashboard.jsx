@@ -139,14 +139,14 @@ const EmployeeDashboard = () => {
                     onClick={() => handleAnnotateRandom(project.project_id)}
                     className="bg-green-600 text-white py-2 px-3 rounded-lg shadow-sm hover:bg-green-700 hover:shadow-md transition"
                   >
-                    Annotate Random
+                    Auto assigned file
                   </button>
 
                   <button
                     onClick={() => handleAnnotateAdmin(project.project_id)}
                     className="bg-green-700 text-white py-2 px-3 rounded-lg shadow-sm hover:bg-green-800 hover:shadow-md transition"
                   >
-                    Annotate Admin
+                    Admin assigned file
                   </button>
 
                   {project.role === "reviewer" && (

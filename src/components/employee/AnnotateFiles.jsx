@@ -300,81 +300,127 @@ export default function AnnotateFile() {
           <div className="flex items-center gap-3">
             <div className="text-xl font-bold text-amber-300">ANNOTATE</div>
             <nav className="flex gap-2">
-              <button
-                onClick={() => setMenuOpen((s) => (s === "general" ? null : "general"))}
-                className={`px-3 py-1 rounded-md ${menuOpen === "general" ? "bg-amber-700/20 border border-amber-500" : "bg-black/40 border border-amber-800/20"}`}
-              >
-                General
-              </button>
-              <button
-                onClick={() => setMenuOpen((s) => (s === "edit" ? null : "edit"))}
-                className={`px-3 py-1 rounded-md ${menuOpen === "edit" ? "bg-amber-700/20 border border-amber-500" : "bg-black/40 border border-amber-800/20"}`}
-              >
-                Edit
-              </button>
-              <button
-                onClick={() => setMenuOpen((s) => (s === "display" ? null : "display"))}
-                className={`px-3 py-1 rounded-md ${menuOpen === "display" ? "bg-amber-700/20 border border-amber-500" : "bg-black/40 border border-amber-800/20"}`}
-              >
-                Display
-              </button>
-              <button
-                onClick={() => setMenuOpen((s) => (s === "help" ? null : "help"))}
-                className={`px-3 py-1 rounded-md ${menuOpen === "help" ? "bg-amber-700/20 border border-amber-500" : "bg-black/40 border border-amber-800/20"}`}
-              >
-                Help
-              </button>
+              {/* General Menu */}
+              <div className="relative">
+                <button
+                  onClick={() => setMenuOpen((s) => (s === "general" ? null : "general"))}
+                  className={`px-3 py-1 rounded-md ${menuOpen === "general" ? "bg-amber-700/20 border border-amber-500" : "bg-black/40 border border-amber-800/20"}`}
+                >
+                  General
+                </button>
+                {menuOpen === "general" && (
+                  <div className="absolute top-full left-0 mt-2 w-56 bg-black/95 border border-amber-600 rounded-lg shadow-2xl z-50 overflow-hidden">
+                    <div className="py-1">
+                      <button onClick={openTaskInfo} className="w-full px-4 py-2.5 text-left text-amber-100 hover:bg-amber-600/20 hover:text-amber-200 transition-colors">
+                        Task information
+                      </button>
+                      <button onClick={openFileUrlInNewTab} className="w-full px-4 py-2.5 text-left text-amber-100 hover:bg-amber-600/20 hover:text-amber-200 transition-colors">
+                        File URL
+                      </button>
+                      <button onClick={() => toast.info("File name: sample_image.jpg (static)")} className="w-full px-4 py-2.5 text-left text-amber-100 hover:bg-amber-600/20 hover:text-amber-200 transition-colors">
+                        File name
+                      </button>
+                      <button onClick={() => navigate(-1)} className="w-full px-4 py-2.5 text-left text-amber-100 hover:bg-amber-600/20 hover:text-amber-200 transition-colors">
+                        Go to dashboard
+                      </button>
+                      <button onClick={() => toast.info("Break reminder (static)")} className="w-full px-4 py-2.5 text-left text-amber-100 hover:bg-amber-600/20 hover:text-amber-200 transition-colors">
+                        Break Reminder
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Edit Menu */}
+              <div className="relative">
+                <button
+                  onClick={() => setMenuOpen((s) => (s === "edit" ? null : "edit"))}
+                  className={`px-3 py-1 rounded-md ${menuOpen === "edit" ? "bg-amber-700/20 border border-amber-500" : "bg-black/40 border border-amber-800/20"}`}
+                >
+                  Edit
+                </button>
+                {menuOpen === "edit" && (
+                  <div className="absolute top-full left-0 mt-2 w-64 bg-black/95 border border-amber-600 rounded-lg shadow-2xl z-50 overflow-hidden">
+                    <div className="py-1">
+                      <button
+                        onClick={() => setDrawEnabled((v) => !v)}
+                        className="w-full px-4 py-2.5 text-left text-amber-100 hover:bg-amber-600/20 hover:text-amber-200 transition-colors flex items-center justify-between"
+                      >
+                        <span>Toggle Drawing</span>
+                        <span className={`text-xs px-2 py-1 rounded ${drawEnabled ? "bg-amber-600 text-black" : "bg-amber-900/40 text-amber-300"}`}>
+                          {drawEnabled ? "ON" : "OFF"}
+                        </span>
+                      </button>
+                      <button onClick={() => toast.info("Move object: drag box to move (already enabled)")} className="w-full px-4 py-2.5 text-left text-amber-100 hover:bg-amber-600/20 hover:text-amber-200 transition-colors">
+                        Move object
+                      </button>
+                      <button onClick={() => toast.info("Hide/unhide create/edit window not implemented (static)")} className="w-full px-4 py-2.5 text-left text-amber-100 hover:bg-amber-600/20 hover:text-amber-200 transition-colors">
+                        Hide/Unhide panel
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Display Menu */}
+              <div className="relative">
+                <button
+                  onClick={() => setMenuOpen((s) => (s === "display" ? null : "display"))}
+                  className={`px-3 py-1 rounded-md ${menuOpen === "display" ? "bg-amber-700/20 border border-amber-500" : "bg-black/40 border border-amber-800/20"}`}
+                >
+                  Display
+                </button>
+                {menuOpen === "display" && (
+                  <div className="absolute top-full left-0 mt-2 w-48 bg-black/95 border border-amber-600 rounded-lg shadow-2xl z-50 overflow-hidden">
+                    <div className="py-1">
+                      <button className="w-full px-4 py-2.5 text-left text-amber-100 hover:bg-amber-600/20 hover:text-amber-200 transition-colors">
+                        Brightness
+                      </button>
+                      <button className="w-full px-4 py-2.5 text-left text-amber-100 hover:bg-amber-600/20 hover:text-amber-200 transition-colors">
+                        Contrast
+                      </button>
+                      <button className="w-full px-4 py-2.5 text-left text-amber-100 hover:bg-amber-600/20 hover:text-amber-200 transition-colors">
+                        Gamma
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Help Menu */}
+              <div className="relative">
+                <button
+                  onClick={() => setMenuOpen((s) => (s === "help" ? null : "help"))}
+                  className={`px-3 py-1 rounded-md ${menuOpen === "help" ? "bg-amber-700/20 border border-amber-500" : "bg-black/40 border border-amber-800/20"}`}
+                >
+                  Help
+                </button>
+                {menuOpen === "help" && (
+                  <div className="absolute top-full left-0 mt-2 w-52 bg-black/95 border border-amber-600 rounded-lg shadow-2xl z-50 overflow-hidden">
+                    <div className="py-1">
+                      <button className="w-full px-4 py-2.5 text-left text-amber-100 hover:bg-amber-600/20 hover:text-amber-200 transition-colors">
+                        Guideline
+                      </button>
+                      <button className="w-full px-4 py-2.5 text-left text-amber-100 hover:bg-amber-600/20 hover:text-amber-200 transition-colors">
+                        Shortcut menu
+                      </button>
+                      <button className="w-full px-4 py-2.5 text-left text-amber-100 hover:bg-amber-600/20 hover:text-amber-200 transition-colors">
+                        Log file
+                      </button>
+                      <button className="w-full px-4 py-2.5 text-left text-amber-100 hover:bg-amber-600/20 hover:text-amber-200 transition-colors">
+                        Provide feedback
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </nav>
           </div>
 
           <div className="text-sm text-amber-300/80">Project: <span className="font-semibold">{project_id}</span></div>
         </div>
-
-        {/* Menu panels */}
-        {menuOpen === "general" && (
-          <div className="mt-2 p-3 bg-black/80 border border-amber-600 rounded-md text-amber-100 flex gap-2">
-            <button onClick={openTaskInfo} className="px-3 py-2 border border-amber-600 rounded-md">Task information</button>
-            <button onClick={openFileUrlInNewTab} className="px-3 py-2 border border-amber-600 rounded-md">File URL</button>
-            <button onClick={() => toast.info("File name: sample_image.jpg (static)")} className="px-3 py-2 border border-amber-600 rounded-md">File name</button>
-            <button onClick={() => navigate(-1)} className="px-3 py-2 border border-amber-600 rounded-md">Go to dashboard</button>
-            <button onClick={() => toast.info("Break reminder (static)")} className="px-3 py-2 border border-amber-600 rounded-md">Break Reminder</button>
-          </div>
-        )}
-
-        {menuOpen === "edit" && (
-          <div className="mt-2 p-3 bg-black/80 border border-amber-600 rounded-md text-amber-100 flex gap-2">
-            <button
-              onClick={() => setDrawEnabled((v) => !v)}
-              className={`px-3 py-2 border rounded-md ${drawEnabled ? "bg-amber-600 text-black" : "border-amber-600 text-amber-100"}`}
-            >
-              {drawEnabled ? "Drag object (drawing ON)" : "Drag object (drawing OFF)"}
-            </button>
-            <button onClick={() => toast.info("Move object: drag box to move (already enabled)")} className="px-3 py-2 border border-amber-600 rounded-md">
-              Move object
-            </button>
-            <button onClick={() => toast.info("Hide/unhide create/edit window not implemented (static)")} className="px-3 py-2 border border-amber-600 rounded-md">
-              Hide/Unhide create/edit window
-            </button>
-          </div>
-        )}
-
-        {menuOpen === "display" && (
-          <div className="mt-2 p-3 bg-black/80 border border-amber-600 rounded-md text-amber-100 flex gap-2">
-            <button className="px-3 py-2 border border-amber-600 rounded-md">Brightness</button>
-            <button className="px-3 py-2 border border-amber-600 rounded-md">Contrast</button>
-            <button className="px-3 py-2 border border-amber-600 rounded-md">Gamma</button>
-          </div>
-        )}
-
-        {menuOpen === "help" && (
-          <div className="mt-2 p-3 bg-black/80 border border-amber-600 rounded-md text-amber-100 grid gap-2">
-            <button className="px-3 py-2 border border-amber-600 rounded-md text-left">Guideline</button>
-            <button className="px-3 py-2 border border-amber-600 rounded-md text-left">Shortcut menu</button>
-            <button className="px-3 py-2 border border-amber-600 rounded-md text-left">Log file</button>
-            <button className="px-3 py-2 border border-amber-600 rounded-md text-left">Provide feedback</button>
-          </div>
-        )}
       </div>
+    
 
       {/* ===== Main Area ===== */}
       <div className="max-w-[1400px] mx-auto flex gap-6">
