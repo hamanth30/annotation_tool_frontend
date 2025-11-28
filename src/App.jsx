@@ -21,7 +21,8 @@ import ProjectEditors from "./components/admin/available_reviewer";
 import AssignedAdminFiles from "./components/employee/showadminfiles";
 import RandomAssignedFiles from "./components/employee/showrandomfile";
 import ProjectAnalytics from "./components/admin/ProjectAnalytics";
-
+import RandomAssignedFilesReview from "./components/reviewer/showrandomfiles"
+import ReviewFile from "./components/reviewer/Reviewercanvas"
 function App() {
   return (
     <>
@@ -33,6 +34,11 @@ function App() {
 
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/employee" element={<EmployeeDashboard />} />
+
+
+
+
+          {/* admin routes */}
 
           <Route path="/admin/new-user" element={<NewUser />} />
           <Route path="/admin/new-project" element={<NewProject />} />
@@ -46,11 +52,28 @@ function App() {
           <Route path="/admin/project/:projectId/promotereviewer" element={<PromoteReviewer />} />
           <Route path="/admin/reviewfileassign/:projectId" element={<ProjectEditors />} />
 
+
+
+
+
+          {/* employee routess */}
+
           {/* <Route path="/employee/annotate/:project_id" element={<AnnotateFile />} /> */}
           <Route path="/employee/annotate/random/start/:projectId/:fileId" element={<AnnotateFile />} />
           <Route path="/draw" element={<DrawRect />} />
           <Route path="/employee/adminfiles/:projectId/:employeeId" element={<AssignedAdminFiles />} />
           <Route path="/employee/randomfiles/:projectId/:employeeId" element={<RandomAssignedFiles />} />
+
+
+
+
+
+
+        {/* reviewer routes */}
+         <Route path="/reviewer/randomfiles/:projectId/:employeeId" element={<RandomAssignedFilesReview />} />
+         <Route path="/reviewer/annotate/start/:projectId/:fileId" element={< ReviewFile />} />
+
+
         </Routes>
       </BrowserRouter>
 
