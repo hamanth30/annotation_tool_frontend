@@ -46,8 +46,8 @@ function App() {
           <Route path="/admin/project/:projectId/promotereviewer" element={<PromoteReviewer />} />
           <Route path="/admin/reviewfileassign/:projectId" element={<ProjectEditors />} />
 
-          <Route path="/employee/annotate/:project_id" element={<AnnotateFile />} />
-          <Route path="/employee/annotate/random/start/:project_id/:file_id" element={<AnnotateFile />} />
+          {/* <Route path="/employee/annotate/:project_id" element={<AnnotateFile />} /> */}
+          <Route path="/employee/annotate/random/start/:projectId/:fileId" element={<AnnotateFile />} />
           <Route path="/draw" element={<DrawRect />} />
           <Route path="/employee/adminfiles/:projectId/:employeeId" element={<AssignedAdminFiles />} />
           <Route path="/employee/randomfiles/:projectId/:employeeId" element={<RandomAssignedFiles />} />
