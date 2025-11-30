@@ -13,33 +13,30 @@ export default function ProjectUnassignedReviews() {
   const apiBase = "http://localhost:8000/api/admin";
 
   const fetchReviewFiles = async () => {
-    setLoading(true);
-    try {
-      const res = await axios.get(
-        `${apiBase}/project/${projectId}/unassigned-reviews`
-      );
+  setLoading(true);
+  try {
+    const res = await axios.get(
+      `${apiBase}/project/${projectId}/unassigned-reviews`
+    );
 
-      const files = res.data?.unassigned_review_files || [];
+    const files = res.data?.unassigned_review_files || [];
 
-      console.log("Unassigned files:", files);
+    console.log("Unassigned files:", files);
 
-      // Normalize: always store as array of strings (urls only)
-      const normalized = files
-        .map((item) => {
-          if (typeof item === "string") return item;
-          if (typeof item === "object" && item !== null) {
-            return item.url || item.Location || item.signedUrl || null;
-          }
-          return null;
-        })
-        .filter(Boolean); // remove nulls
+    // Keep ONLY files assigned by admin
+    //const adminFiles = files.filter((f) => f.assigned_by === "admin");
 
-      setReviewFiles(normalized);
-    } catch (err) {
-      console.error("Error fetching unassigned review files:", err);
-    }
-    setLoading(false);
-  };
+    //console.log("Filtered (assigned_by = admin):", adminFiles);
+
+    // No normalization. Store full objects.
+    setReviewFiles(files);
+
+  } catch (err) {
+    console.error("Error fetching unassigned review files:", err);
+  }
+  setLoading(false);
+};
+
 
   useEffect(() => {
     fetchReviewFiles();
@@ -76,14 +73,13 @@ export default function ProjectUnassignedReviews() {
         <p className="text-gray-500 text-lg">No unassigned review files.</p>
       )}
 
-      {/* FILE GRID */}
+
+
+           {/* FILE GRID */}
       {!loading && reviewFiles.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-          {reviewFiles.map((url, idx) => {
-            const filename =
-              typeof url === "string"
-                ? url.split("/").pop().split("?")[0]
-                : "unknown-file";
+          {reviewFiles.map((file, idx) => {
+            const { file_id, object_url, filename } = file;
 
             return (
               <div
@@ -91,15 +87,11 @@ export default function ProjectUnassignedReviews() {
                 className="p-4 bg-white rounded-xl shadow hover:shadow-lg transition border border-gray-100"
               >
                 {/* IMAGE */}
-                <a href={url} target="_blank" rel="noopener noreferrer">
+                <a href={object_url} target="_blank" rel="noopener noreferrer">
                   <img
-                    src={url}
+                    src={object_url}
                     alt=""
                     className="w-full h-40 object-cover rounded-lg mb-4 border"
-                    onError={(e) => {
-                      e.target.src =
-                        "https://via.placeholder.com/300x200?text=File";
-                    }}
                   />
                 </a>
 
@@ -113,15 +105,15 @@ export default function ProjectUnassignedReviews() {
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={selectedFiles.includes(url)}
-                      onChange={() => toggleFileSelection(url)}
+                      checked={selectedFiles.includes(file_id)}
+                      onChange={() => toggleFileSelection(file_id)}
                       className="h-5 w-5 accent-indigo-600"
                     />
                     <span className="text-gray-700">Select</span>
                   </label>
 
                   <a
-                    href={url}
+                    href={object_url}
                     target="_blank"
                     className="text-indigo-600 text-sm underline"
                   >
@@ -134,19 +126,35 @@ export default function ProjectUnassignedReviews() {
         </div>
       )}
 
+
       {/* ASSIGN BUTTON */}
       {selectedFiles.length > 0 && (
         <div className="mt-8 flex justify-end">
-          <button
+          {/* <button
             className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition shadow"
             onClick={() =>{
-                navigate(`/admin/reviewfileassign/${projectId}`)
+                //navigate(`/admin/reviewfileassign/${projectId}`)
+                navigate(`/admin/reviewfileassign/${projectId}`, {
+                  state: { selectedReviewFileIds: selectedFiles }
+                });
+
             }
               
             }
           >
             Assign {selectedFiles.length} Review File(s)
+          </button> */}
+          <button
+            className="px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition shadow"
+            onClick={() => {
+              navigate(`/admin/reviewfileassign/${projectId}`, {
+                state: { selectedReviewFileIds: selectedFiles }
+              });
+            }}
+          >
+            Assign {selectedFiles.length} Review File(s)
           </button>
+
         </div>
       )}
     </div>

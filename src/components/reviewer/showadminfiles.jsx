@@ -4,7 +4,7 @@ import { useParams , useNavigate} from "react-router-dom";
 
 const API_BASE_URL = "http://localhost:8000";
 
-const AssignedAdminFiles = () => {
+const AssignedAdminFilesReviewer = () => {
   const { projectId } = useParams();
   const employeeId = localStorage.getItem("userId");
   const navigate = useNavigate();
@@ -12,37 +12,44 @@ const AssignedAdminFiles = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const fetchFiles = async () => {
-      try {
-        setLoading(true);
-        const response = await axios.get(
-          `${API_BASE_URL}/api/employee/user/${employeeId}/assigned-files`
-        );
+useEffect(() => {
+  const fetchAssignedFiles = async () => {
+    try {
+      setLoading(true);
 
-        const filtered = response.data.filter(
-          (f) => f.project_id == projectId && f.assigned_by === "admin"
-        );
+      const res = await axios.get(
+        `${API_BASE_URL}/api/reviewer/review-files/${projectId}/${employeeId}`
+      );
 
-        setFiles(filtered);
-      } catch (err) {
-        setError("Unable to load assigned files.");
-      } finally {
-        setLoading(false);
-      }
-    };
+      const allFiles = res.data.files || [];
 
-    fetchFiles();
-  }, [projectId, employeeId]);
+      // 🔥 Only keep files assigned by random
+      const filtered = allFiles.filter(
+        (f) => f.assigned_by_review === "admin"
+      );
+
+      setFiles(filtered);
+    } catch (err) {
+      console.error("Error loading assigned review files", err);
+      setError("Could not load assigned review files.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchAssignedFiles();
+}, [projectId, employeeId]);
+
   const handleStart = (fileId, objectUrl) => {
 
     console.log("hi from sarva",fileId, objectUrl,projectId)
     navigate(
-      `/employee/annotate/random/start/${projectId}/${fileId}`,
+    //   `/employee/annotate/random/start/${projectId}/${fileId}`,
+    `/reviewer/annotate/start/${projectId}/${fileId}`,
       {
         state: { 
           imageUrl: objectUrl,
-          fromRandomAssign: true 
+          from: "admin" 
         }
       }
     );
@@ -80,9 +87,7 @@ const AssignedAdminFiles = () => {
             <tr className="bg-gray-100 text-gray-700 text-sm uppercase tracking-wide">
               <th className="px-6 py-4 text-left font-semibold">File ID</th>
               <th className="px-6 py-4 text-left font-semibold">Filename</th>
-              <th className="px-6 py-4 text-left font-semibold">
-                Assigned At
-              </th>
+              
               <th className="px-6 py-4 text-left font-semibold">Status</th>
               <th className="px-6 py-4 text-center font-semibold">Action</th>
             </tr>
@@ -108,9 +113,7 @@ const AssignedAdminFiles = () => {
                   </a>
                 </td>
 
-                <td className="px-6 py-4 text-gray-600">
-                  {new Date(file.assigned_at).toLocaleString()}
-                </td>
+                
 
                 <td className="px-6 py-4">
                   <span
@@ -120,7 +123,7 @@ const AssignedAdminFiles = () => {
                         : "bg-yellow-100 text-yellow-700"
                     }`}
                   >
-                    {file.review_cycle === 0 ? "newly assigned" : "rejected file"}
+                    {file.review_cycle === 1 ? "newly assigned" : "rejected file"}
                   </span>
                 </td>
 
@@ -147,4 +150,4 @@ const AssignedAdminFiles = () => {
   );
 };
 
-export default AssignedAdminFiles;
+export default AssignedAdminFilesReviewer;
