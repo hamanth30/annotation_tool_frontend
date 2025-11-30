@@ -1241,6 +1241,7 @@ export default function ReviewFile() {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Annotate panel + modal state
   const [annotateTab, setAnnotateTab] = useState("create");
@@ -1265,6 +1266,10 @@ export default function ReviewFile() {
   // Track previous rect count to detect new rects
   const prevCountRef = useRef(0);
   const menuRef = useRef(null);
+  // Track if initial annotations have been loaded (to prevent saving on initial load)
+  const initialLoadRef = useRef(false);
+  // Track if there are unsaved changes
+  const hasUnsavedChangesRef = useRef(false);
 
   // Close dropdown when clicking outside (from Code 1)
   useEffect(() => {
@@ -1328,56 +1333,198 @@ export default function ReviewFile() {
     if (projectId) fetchClasses();
   }, [projectId, token]);
 
-
   // Fetch existing annotations for this file
-useEffect(() => {
-  const fetchAnnotations = async () => {
-    if (!fileId) return;
+  useEffect(() => {
+      const fetchAnnotations = async () => {
+      if (!fileId) return;
 
-    try {
-      const res = await axios.get(
-        `${API_BASE_URL}/api/general/annotations/${fileId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      try {
+        const res = await axios.get(
+          `${API_BASE_URL}/api/general/annotations/${fileId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
 
-      const annotations = res.data?.annotations || [];
-      const latestAnnotation = annotations[annotations.length - 1];
-      let annotationData = latestAnnotation?.data || [];
+        console.log("Reviewer: fetched annotations response", res.data);
 
-      // Parse if JSON string
-      if (typeof annotationData === "string") {
-        annotationData = JSON.parse(annotationData);
+        const annotations = res.data?.annotations || [];
+
+        if (annotations.length === 0) {
+          console.log("Reviewer: no annotations found for this file");
+          return;
+        }
+
+        // For now, take the last annotation entry (you can change this logic
+        // to filter by review_state, review_cycle, etc.)
+        const latestAnnotation = annotations[annotations.length - 1];
+        let annotationData = latestAnnotation?.data || [];
+
+        // In case backend stores JSON as string, attempt to parse
+        if (typeof annotationData === "string") {
+          try {
+            annotationData = JSON.parse(annotationData);
+          } catch (e) {
+            console.error(
+              "Reviewer: failed to parse annotation data JSON string",
+              e
+            );
+            annotationData = [];
+          }
+        }
+
+        if (!Array.isArray(annotationData)) {
+          console.warn(
+            "Reviewer: annotation data is not an array, got:",
+            annotationData
+          );
+          return;
+        }
+
+        // Convert annotation data to rectData format
+        const convertedRects = annotationData.map((box) => {
+          const baseShape = {
+            id: String(box.id),
+            type: box.type || "rectangle",
+            classes: {
+              className: box.classes?.className || "",
+              attributeName: box.classes?.attributeName || "",
+              attributeValue: box.classes?.attributeValue || "",
+            },
+            color: boxColor,
+          };
+
+          // Handle rectangles
+          if (box.type === "rectangle" || !box.type) {
+            return {
+              ...baseShape,
+              x: Number(box.x),
+              y: Number(box.y),
+              width: Number(box.width),
+              height: Number(box.height),
+            };
+          }
+
+          // Handle polygons and polylines
+          if (box.type === "polygon" || box.type === "polyline") {
+            return {
+              ...baseShape,
+              points: Array.isArray(box.points) ? box.points.map(Number) : [],
+            };
+          }
+
+          return baseShape;
+        });
+
+        console.log("Reviewer: converted rects", convertedRects);
+
+        setRectData(convertedRects);
+        prevCountRef.current = convertedRects.length;
+        initialLoadRef.current = true; // Mark initial load as complete
+        hasUnsavedChangesRef.current = false; // Reset unsaved changes flag
+        setHasUnsavedChanges(false); // Reset state
+
+        if (convertedRects.length > 0) {
+          toast.info(`Loaded ${convertedRects.length} existing annotation(s)`);
+        }
+      } catch (err) {
+        // If no annotations found (404), that's okay - file might be new
+        if (err.response?.status !== 404) {
+          console.error("Reviewer: failed to load annotations", err);
+        } else {
+          console.log("Reviewer: no annotations (404) for this file yet");
+        }
+        initialLoadRef.current = true; // Mark initial load as complete even if no annotations
+        hasUnsavedChangesRef.current = false;
+        setHasUnsavedChanges(false);
       }
+    };
 
-      // Convert annotation data → rect format
-      const convertedRects = annotationData.map((box) => ({
-        id: String(box.id),
-        type: box.type || "rectangle",
-        x: Number(box.x),
-        y: Number(box.y),
-        width: Number(box.width),
-        height: Number(box.height),
-        classes: {
-          className: box.classes?.className || "",
-          attributeName: box.classes?.attributeName || "",
-          attributeValue: box.classes?.attributeValue || "",
-        },
-        color: boxColor,
-      }));
-
-      setRectData(convertedRects);
-      prevCountRef.current = convertedRects.length;
-      toast.info(`Loaded ${convertedRects.length} existing annotation(s)`);
-
-    } catch (err) {
-      if (err.response?.status !== 404) {
-        console.error("Failed to load annotations", err);
-      }
+    if (fileId && imageUrl) {
+      initialLoadRef.current = false; // Reset before loading
+      fetchAnnotations();
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fileId, imageUrl, token]);
 
-  if (fileId && imageUrl) fetchAnnotations();
-}, [fileId, imageUrl, token]);
+  // Auto-save reviewer changes with debouncing
+  // This useEffect saves changes to the database after a delay when rectData changes
+  useEffect(() => {
+    // Don't save if:
+    // 1. Initial load hasn't completed yet
+    // 2. No fileId available
+    // 3. No unsaved changes
+    if (!initialLoadRef.current || !fileId || !hasUnsavedChangesRef.current) {
+      return;
+    }
+
+    // Debounce: wait 2 seconds after last change before auto-saving
+    const autoSaveTimer = setTimeout(async () => {
+      if (!hasUnsavedChangesRef.current || isSaving) {
+        return;
+      }
+
+      try {
+        setIsSaving(true);
+        const payload = {
+          data: rectData.map((b) => {
+            const baseData = {
+              id: String(b.id),
+              type: b.type || "rectangle",
+              classes: {
+                className: b.classes?.className || "",
+                attributeName: b.classes?.attributeName || "",
+                attributeValue: b.classes?.attributeValue || "",
+              },
+            };
+
+            // Handle rectangles
+            if (b.type === "rectangle" || !b.type) {
+              return {
+                ...baseData,
+                x: Number(b.x),
+                y: Number(b.y),
+                width: Number(b.width),
+                height: Number(b.height),
+              };
+            }
+
+            // Handle polygons and polylines
+            if (b.type === "polygon" || b.type === "polyline") {
+              return {
+                ...baseData,
+                points: Array.isArray(b.points) ? b.points.map(Number) : [],
+              };
+            }
+
+            return baseData;
+          }),
+        };
+
+        console.log("Reviewer: Auto-saving annotations", payload);
+        
+        // Use the same endpoint as employee - it updates the same annotation record for the file
+        await axios.put(`${API_BASE_URL}/api/employee/save_annotation/${fileId}`, payload, {
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        });
+        
+        // Reset unsaved changes flag after successful save
+        hasUnsavedChangesRef.current = false;
+        setHasUnsavedChanges(false);
+        console.log("Reviewer: Auto-saved successfully");
+      } catch (err) {
+        console.error("Reviewer: Auto-save failed", err);
+        // Don't show toast for auto-save failures to avoid annoying the user
+        // User can still manually save
+      } finally {
+        setIsSaving(false);
+      }
+    }, 2000); // 2 second debounce
+
+    // Cleanup: clear timer if rectData changes again before the timer completes
+    return () => {
+      clearTimeout(autoSaveTimer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rectData, fileId, token]);
 
   // Handle rect changes from DrawRect
   const handleRectChange = (rects) => {
@@ -1395,6 +1542,11 @@ useEffect(() => {
         // propagate new rects, then open modal for the new id
         setRectData(normalized);
         prevCountRef.current = normalized.length;
+        // Mark as having unsaved changes only after initial load
+        if (initialLoadRef.current) {
+          hasUnsavedChangesRef.current = true;
+          setHasUnsavedChanges(true);
+        }
         // open modal for the newly added rect (same behavior as Code 1)
         // slight delay ensures rectData state is set — but we can open immediately using added.id
         openModalForBox(added.id);
@@ -1404,6 +1556,11 @@ useEffect(() => {
 
     prevCountRef.current = normalized.length;
     setRectData(normalized);
+    // Mark as having unsaved changes only after initial load
+    if (initialLoadRef.current) {
+      hasUnsavedChangesRef.current = true;
+      setHasUnsavedChanges(true);
+    }
   };
 
   // Modal helpers
@@ -1452,6 +1609,11 @@ useEffect(() => {
           : r
       )
     );
+    // Mark as having unsaved changes
+    if (initialLoadRef.current) {
+      hasUnsavedChangesRef.current = true;
+      setHasUnsavedChanges(true);
+    }
     closeModal();
   };
 
@@ -1460,6 +1622,11 @@ useEffect(() => {
     setRectData((prev) => {
       const updated = prev.filter((r) => String(r.id) !== String(boxId));
       prevCountRef.current = updated.length;
+      // Mark as having unsaved changes
+      if (initialLoadRef.current) {
+        hasUnsavedChangesRef.current = true;
+        setHasUnsavedChanges(true);
+      }
       return updated;
     });
     toast.info("Box removed.");
@@ -1508,8 +1675,9 @@ useEffect(() => {
     }
   };
 
-  // Save annotation
-  const handleSaveAnnotation = async () => {
+  // Save reviewer annotation - handles all shape types (rectangles, polygons, polylines)
+  // Note: Uses the same endpoint as employee since both update the same annotation record for the file
+  const handleSaveReviewerAnnotation = async () => {
     if (!fileId) {
       toast.error("File ID missing.");
       return;
@@ -1517,32 +1685,61 @@ useEffect(() => {
     try {
       setIsSaving(true);
       const payload = {
-        data: rectData.map((b) => ({
-          id: String(b.id),
-          x: Number(b.x),
-          y: Number(b.y),
-          width: Number(b.width),
-          height: Number(b.height),
-          classes: {
-            className: b.classes?.className || "",
-            attributeName: b.classes?.attributeName || "",
-            attributeValue: b.classes?.attributeValue || "",
-          },
-        })),
+        data: rectData.map((b) => {
+          const baseData = {
+            id: String(b.id),
+            type: b.type || "rectangle",
+            classes: {
+              className: b.classes?.className || "",
+              attributeName: b.classes?.attributeName || "",
+              attributeValue: b.classes?.attributeValue || "",
+            },
+          };
+
+          // Handle rectangles
+          if (b.type === "rectangle" || !b.type) {
+            return {
+              ...baseData,
+              x: Number(b.x),
+              y: Number(b.y),
+              width: Number(b.width),
+              height: Number(b.height),
+            };
+          }
+
+          // Handle polygons and polylines
+          if (b.type === "polygon" || b.type === "polyline") {
+            return {
+              ...baseData,
+              points: Array.isArray(b.points) ? b.points.map(Number) : [],
+            };
+          }
+
+          return baseData;
+        }),
       };
 
-      console.log(payload)
+      console.log("Reviewer: Saving annotations", payload);
+      
+      // Use the same endpoint as employee - it updates the same annotation record for the file
       await axios.put(`${API_BASE_URL}/api/employee/save_annotation/${fileId}`, payload, {
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
       });
-      toast.success("Saved!");
+      
+      // Reset unsaved changes flag after successful save
+      hasUnsavedChangesRef.current = false;
+      setHasUnsavedChanges(false);
+      toast.success("Reviewer annotations saved successfully!");
     } catch (err) {
-      console.error("Save failed:", err);
-      toast.error("Save failed.");
+      console.error("Reviewer: Save failed", err);
+      toast.error(err.response?.data?.message || "Failed to save reviewer annotations.");
     } finally {
       setIsSaving(false);
     }
   };
+
+  // Legacy function name for backward compatibility (redirects to reviewer save)
+  const handleSaveAnnotation = handleSaveReviewerAnnotation;
 
   // Submit annotation
   const handleSubmitAnnotation = async () => {
@@ -1964,9 +2161,11 @@ useEffect(() => {
 
                     {/* SAVE (top full-width) */}
                     <button
-                    className="w-full mb-3 px-4 py-2 rounded-md bg-amber-600 text-black font-semibold hover:shadow-lg transition active:scale-95"
+                    onClick={handleSaveReviewerAnnotation}
+                    disabled={isSaving}
+                    className={`w-full mb-3 px-4 py-2 rounded-md bg-amber-600 text-black font-semibold hover:shadow-lg transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed ${hasUnsavedChanges ? 'ring-2 ring-amber-400' : ''}`}
                     >
-                    Save
+                    {isSaving ? "Saving..." : "Save"}
                     </button>
 
                     {/* APPROVE + REJECT (same row) */}
