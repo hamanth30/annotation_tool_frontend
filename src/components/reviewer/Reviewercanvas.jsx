@@ -29,7 +29,11 @@ const getAttributesForClass = (classes, className) => {
 export default function ReviewFile() {
   const { projectId, fileId } = useParams();
   const location = useLocation();
+  //const{state}= useLocation();
   const navigate = useNavigate();
+
+  
+
 
   const [rejectOpen, setRejectOpen] = useState(false);
   const [rejectText, setRejectText] = useState("");
@@ -743,7 +747,8 @@ export default function ReviewFile() {
                                 
                                 console.log("Annotation accepted successfully.");
                                 console.log("Response data:", response.data);
-                                navigate(`/reviewer/randomfiles/${projectId}/${localStorage.getItem("userId")}`)
+
+                                navigate(-1)
                                 return response.data;
                                 
                             } 
@@ -830,7 +835,13 @@ export default function ReviewFile() {
                         console.error("Reject failed:", err);
                         toast.error("Reject failed");
                     });
-                    navigate(`/reviewer/randomfiles/${projectId}/${localStorage.getItem("userId")}`)
+                    //location.state?.from ==="random":navigate(`/reviewer/randomfiles/${projectId}/${localStorage.getItem("userId")}`)?navigate(`/reviewer/seeassignedreviewfiles/${projectId}`)
+                    if (location.state?.from === "admin") {
+                            navigate(`/reviewer/seeassignedreviewfiles/${projectId}`);
+                            
+                          } else {
+                            navigate(`/reviewer/randomfiles/${projectId}/${localStorage.getItem("userId")}`);
+                          }
 
                     }}
                     className="px-3 py-1 text-xs rounded-md bg-red-600 text-black font-semibold"
