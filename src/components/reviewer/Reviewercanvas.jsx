@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import axios from "axios";
-import DrawRect from "./DrawRect";
+import DrawRect from "../employee/DrawRect";
 import { useParams, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import {
@@ -27,10 +27,14 @@ const getAttributesForClass = (classes, className) => {
   }));
 };
 
-export default function AnnotateFile() {
+export default function ReviewFile() {
   const { projectId, fileId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+
+  const [rejectOpen, setRejectOpen] = useState(false);
+  const [rejectText, setRejectText] = useState("");
+
 
   const token = localStorage.getItem("token");
   const user_id = localStorage.getItem("userId");
@@ -130,6 +134,111 @@ export default function AnnotateFile() {
     };
     if (projectId) fetchClasses();
   }, [projectId, token]);
+
+  // Fetch existing annotations for this file
+  useEffect(() => {
+    const fetchAnnotations = async () => {
+      if (!fileId) return;
+
+      try {
+        const res = await axios.get(
+          `${API_BASE_URL}/api/general/annotations/${fileId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        console.log("Reviewer: fetched annotations response", res.data);
+
+        const annotations = res.data?.annotations || [];
+
+        if (annotations.length === 0) {
+          console.log("Reviewer: no annotations found for this file");
+          return;
+        }
+
+        // For now, take the last annotation entry (you can change this logic
+        // to filter by review_state, review_cycle, etc.)
+        const latestAnnotation = annotations[annotations.length - 1];
+        let annotationData = latestAnnotation?.data || [];
+
+        // In case backend stores JSON as string, attempt to parse
+        if (typeof annotationData === "string") {
+          try {
+            annotationData = JSON.parse(annotationData);
+          } catch (e) {
+            console.error(
+              "Reviewer: failed to parse annotation data JSON string",
+              e
+            );
+            annotationData = [];
+          }
+        }
+
+        if (!Array.isArray(annotationData)) {
+          console.warn(
+            "Reviewer: annotation data is not an array, got:",
+            annotationData
+          );
+          return;
+        }
+
+        // Convert annotation data to rectData format
+        const convertedRects = annotationData.map((box) => {
+          const baseShape = {
+            id: String(box.id),
+            type: box.type || "rectangle",
+            classes: {
+              className: box.classes?.className || "",
+              attributeName: box.classes?.attributeName || "",
+              attributeValue: box.classes?.attributeValue || "",
+            },
+            color: boxColor,
+          };
+
+          // Handle rectangles
+          if (box.type === "rectangle" || !box.type) {
+            return {
+              ...baseShape,
+              x: Number(box.x),
+              y: Number(box.y),
+              width: Number(box.width),
+              height: Number(box.height),
+            };
+          }
+
+          // Handle polygons and polylines
+          if (box.type === "polygon" || box.type === "polyline") {
+            return {
+              ...baseShape,
+              points: Array.isArray(box.points) ? box.points.map(Number) : [],
+            };
+          }
+
+          return baseShape;
+        });
+
+        console.log("Reviewer: converted rects", convertedRects);
+
+        setRectData(convertedRects);
+        prevCountRef.current = convertedRects.length;
+
+        if (convertedRects.length > 0) {
+          toast.info(`Loaded ${convertedRects.length} existing annotation(s)`);
+        }
+      } catch (err) {
+        // If no annotations found (404), that's okay - file might be new
+        if (err.response?.status !== 404) {
+          console.error("Reviewer: failed to load annotations", err);
+        } else {
+          console.log("Reviewer: no annotations (404) for this file yet");
+        }
+      }
+    };
+
+    if (fileId && imageUrl) {
+      fetchAnnotations();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fileId, imageUrl, token]);
 
   // Handle rect changes from DrawRect
   const handleRectChange = (rects) => {
@@ -464,7 +573,7 @@ export default function AnnotateFile() {
       <div className="max-w-[1400px] mx-auto mb-4">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="text-xl font-bold text-amber-300">ANNOTATE</div>
+            <div className="text-xl font-bold text-amber-300">REVIEW</div>
             <nav ref={menuRef} className="flex gap-2">
               {/* General Menu */}
               <div className="relative">
@@ -618,10 +727,17 @@ export default function AnnotateFile() {
       <div className="max-w-[1400px] mx-auto flex gap-6 ml-16">
         {/* Canvas Column */}
         <div className="flex flex-col items-start grow-[1]">
-          <div className="flex items-center gap-3 mb-4">
-            {/* <button onClick={() => navigate(-1)} className="bg-amber-900/20 border border-amber-600 text-amber-200 px-3 py-2 rounded hover:scale-105 transition">← Back</button> */}
-            {/* <h2 className="text-2xl font-semibold text-amber-200">Annotating Project #{projectId}</h2> */}
-          </div>
+          {/* <div className="flex items-center gap-3 mb-4">
+            <button
+              onClick={() => navigate(-1)}
+              className="bg-amber-900/20 border border-amber-600 text-amber-200 px-3 py-2 rounded hover:scale-105 transition"
+            >
+              ← Back
+            </button>
+            <h2 className="text-2xl font-semibold text-amber-200">
+              Annotating Project #{projectId}
+            </h2>
+          </div> */}
 
           <div className="rounded-xl shadow-2xl border border-amber-500 overflow-hidden transition-transform duration-300 hover:scale-[1.005]">
             <DrawRect
@@ -638,10 +754,14 @@ export default function AnnotateFile() {
 
           {/* Annotation details table */}
           <div className="mt-6 w-full">
-            <h3 className="text-lg font-semibold text-amber-100 mb-3">Annotation Details</h3>
+            <h3 className="text-lg font-semibold text-amber-100 mb-3">
+              Annotation Details
+            </h3>
 
             {rectData.length === 0 ? (
-              <p className="text-amber-300/60 text-sm">No boxes drawn yet. Draw a box to begin.</p>
+              <p className="text-amber-300/60 text-sm">
+                No boxes drawn yet. Draw a box to begin.
+              </p>
             ) : (
               <div className="overflow-hidden rounded-xl border border-amber-600 shadow-inner bg-black/40">
                 <table className="min-w-full text-sm text-left">
@@ -659,15 +779,36 @@ export default function AnnotateFile() {
                   </thead>
                   <tbody className="divide-y divide-amber-700/30">
                     {rectData.map((box, index) => (
-                      <tr key={box.id} className={`${index % 2 === 0 ? "bg-black/30" : "bg-black/20"} hover:bg-amber-900/30 transition`}>
-                        <td className="px-4 py-3 font-medium text-amber-100">{index + 1}</td>
-                        <td className="px-4 py-3 text-amber-200">{Number(box.x).toFixed(1)}</td>
-                        <td className="px-4 py-3 text-amber-200">{Number(box.y).toFixed(1)}</td>
-                        <td className="px-4 py-3 text-amber-200">{Number(box.width).toFixed(1)}</td>
-                        <td className="px-4 py-3 text-amber-200">{Number(box.height).toFixed(1)}</td>
-                        <td className="px-4 py-3 font-semibold text-amber-400">{box.classes?.className || "-"}</td>
-                        <td className="px-4 py-3 text-amber-300">{box.classes?.attributeName || "-"}</td>
-                        <td className="px-4 py-3 text-amber-300">{box.classes?.attributeValue || "-"}</td>
+                      <tr
+                        key={box.id}
+                        className={`${
+                          index % 2 === 0 ? "bg-black/30" : "bg-black/20"
+                        } hover:bg-amber-900/30 transition`}
+                      >
+                        <td className="px-4 py-3 font-medium text-amber-100">
+                          {index + 1}
+                        </td>
+                        <td className="px-4 py-3 text-amber-200">
+                          {Number(box.x).toFixed(1)}
+                        </td>
+                        <td className="px-4 py-3 text-amber-200">
+                          {Number(box.y).toFixed(1)}
+                        </td>
+                        <td className="px-4 py-3 text-amber-200">
+                          {Number(box.width).toFixed(1)}
+                        </td>
+                        <td className="px-4 py-3 text-amber-200">
+                          {Number(box.height).toFixed(1)}
+                        </td>
+                        <td className="px-4 py-3 font-semibold text-amber-400">
+                          {box.classes?.className || "-"}
+                        </td>
+                        <td className="px-4 py-3 text-amber-300">
+                          {box.classes?.attributeName || "-"}
+                        </td>
+                        <td className="px-4 py-3 text-amber-300">
+                          {box.classes?.attributeValue || "-"}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -678,13 +819,20 @@ export default function AnnotateFile() {
         </div>
 
         {/* Annotate Panel (right) */}
-        <aside className={`transition-all duration-300 ${panelVisible ? "w-[380px] max-h-[calc(100vh-8rem)]" : "w-0 p-0 pointer-events-none opacity-0"} rounded-xl border border-amber-500 bg-gradient-to-b from-black/80 to-neutral-900 shadow-lg flex flex-col overflow-hidden`}>
+        <aside
+          className={`transition-all duration-300 ${
+            panelVisible
+              ? "w-[330px] max-h-[calc(100vh-8rem)]"
+              : "w-0 p-0 pointer-events-none opacity-0"
+          } rounded-xl border border-amber-700/40 bg-black/40 backdrop-blur-xl flex flex-col overflow-hidden`}
+        >
           {panelVisible && (
-            <div className="w-[380px] h-full flex flex-col max-h-[calc(100vh-8rem)]">
+            <div className="w-[330px] h-full flex flex-col max-h-[calc(100vh-8rem)]">
+
               {/* Fixed Header */}
-              <div className="flex-shrink-0 border-b border-amber-700/30">
+              <div className="flex-shrink-0 border-b border-amber-700/30 bg-black/40">
                 <div className="p-3 pb-2.5">
-                  <h3 className="text-base font-semibold text-amber-100 mb-3 text-center">ANNOTATE</h3>
+                  <h3 className="text-base font-semibold text-amber-100 mb-3 text-center">REVIEW</h3>
                   
                   {/* Tabs */}
                   <div className="flex gap-1.5 w-full">
@@ -713,108 +861,172 @@ export default function AnnotateFile() {
               </div>
 
               {/* Scrollable Content Area */}
-              <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-3">
-                {/* Create Tab */}
-                {annotateTab === "create" && (
-                  <div className="space-y-2.5">
-                    <div className="text-xs text-amber-300/70 mb-2">
-                      CLASSES: <span className="font-semibold text-amber-200">{classes.length}</span>
-                    </div>
+              <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden px-3 py-3">
+
+              {/* Create Tab */}
+              {annotateTab === "create" && (
+                <div className="space-y-2.5">
+                  <div className="text-xs text-amber-300/70 mb-2">
+                    CLASSES: <span className="font-semibold text-amber-200">{classes.length}</span>
+                  </div>
+                  <div className="space-y-1.5">
+                    {classes.map((c, idx) => (
+                      <div
+                        key={c.name}
+                        className="flex items-center justify-between p-2 rounded-md border border-amber-700/30 bg-black/40 hover:border-amber-500 transition-all"
+                      >
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <div
+                            className="flex-shrink-0"
+                            style={{ width: 10, height: 10, borderRadius: 5, background: c.color || "#a67c00" }}
+                          />
+                          <div className="text-xs font-medium text-amber-100 truncate">{c.name}</div>
+                        </div>
+                        <div className="text-xs text-amber-300/70 flex-shrink-0 ml-2">{idx + 1}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Edit Tab */}
+              {annotateTab === "edit" && (
+                <div className="space-y-2.5">
+                  <div className="text-xs text-amber-300/70 mb-2">Selected per box</div>
+                  {rectData.length === 0 ? (
+                    <div className="text-amber-300/60 text-xs">No boxes yet.</div>
+                  ) : (
                     <div className="space-y-1.5">
-                      {classes.map((c, idx) => (
+                      {rectData.map((r, idx) => (
                         <div
-                          key={c.name}
-                          className="flex items-center justify-between p-2 rounded-md border border-amber-700/30 bg-black/40 hover:border-amber-500 transition-all"
+                          key={r.id}
+                          className="flex items-start justify-between p-2 rounded-md border border-amber-700/30 bg-black/40 hover:bg-amber-900/20 transition-all"
                         >
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <div
-                              className="flex-shrink-0"
-                              style={{
-                                width: 10,
-                                height: 10,
-                                borderRadius: 5,
-                                background: c.color || "#a67c00",
-                              }}
-                            />
+                          <div className="flex-1 min-w-0 pr-2">
                             <div className="text-xs font-medium text-amber-100 truncate">
-                              {c.name}
+                              {idx + 1}. {r.classes?.className || "—"}
+                            </div>
+                            <div className="text-xs text-amber-300/70 truncate mt-0.5">
+                              {r.classes?.attributeName
+                                ? `${r.classes.attributeName}: ${r.classes.attributeValue || "-"}`
+                                : "No attribute"}
                             </div>
                           </div>
-                          <div className="text-xs text-amber-300/70 flex-shrink-0 ml-2">
-                            {idx + 1}
+                          <div className="flex items-center gap-1.5 flex-shrink-0">
+                            <button
+                              onClick={() => onEditPencilClick(r.id)}
+                              title="Edit box"
+                              className="p-1 text-amber-200/90 hover:text-amber-100 transition-colors"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteBox(r.id)}
+                              title="Delete box"
+                              className="p-1 text-amber-200/90 hover:text-amber-100 transition-colors"
+                            >
+                              <Trash2 size={14} />
+                            </button>
                           </div>
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
+              )}
 
-                {/* Edit Tab */}
-                {annotateTab === "edit" && (
-                  <div className="space-y-2.5">
-                    <div className="text-xs text-amber-300/70 mb-2">
-                      Selected per box
-                    </div>
-                    {rectData.length === 0 ? (
-                      <div className="text-amber-300/60 text-xs">
-                        No boxes yet.
-                      </div>
-                    ) : (
-                      <div className="space-y-1.5">
-                        {rectData.map((r, idx) => (
-                          <div
-                            key={r.id}
-                            className="flex items-start justify-between p-2 rounded-md border border-amber-700/30 bg-black/40 transition-all hover:bg-amber-900/20"
-                          >
-                            <div className="flex-1 min-w-0 pr-2">
-                              <div className="text-xs font-medium text-amber-100 truncate">
-                                {idx + 1}. {r.classes?.className || "—"}
-                              </div>
-                              <div className="text-xs text-amber-300/70 truncate mt-0.5">
-                                {r.classes?.attributeName
-                                  ? `${r.classes.attributeName}: ${r.classes.attributeValue || "-"}`
-                                  : "No attribute"}
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-1.5 flex-shrink-0">
-                              <button
-                                onClick={() => onEditPencilClick(r.id)}
-                                title="Edit box"
-                                className="p-1 text-amber-200/90 hover:text-amber-100 transition-colors"
-                              >
-                                <Pencil size={14} />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteBox(r.id)}
-                                title="Delete box"
-                                className="p-1 text-amber-200/90 hover:text-amber-100 transition-colors"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+              {/* Reject Form (inside scrollable area) */}
+              {rejectOpen && (
+                <div className="mt-4 p-3 bg-black/70 border border-red-600 rounded-lg shadow-lg">
+                  <div className="text-red-400 font-semibold text-sm mb-2">Reason for rejection</div>
+                  <textarea
+                    value={rejectText}
+                    onChange={(e) => setRejectText(e.target.value)}
+                    className="w-full bg-black/40 border border-red-500 text-red-200 rounded p-2 text-sm resize-none"
+                    rows={3}
+                    placeholder="Explain why this file is being rejected..."
+                  />
+                  <div className="flex justify-end gap-2 mt-2">
+                    <button
+                      onClick={() => setRejectOpen(false)}
+                      className="px-3 py-1 text-xs rounded-md border border-red-600 text-red-300 hover:bg-red-600/20 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        console.log("Rejecting with reason:", rejectText);
+                        setRejectOpen(false);
+                        const body = {
+                          project_id: projectId,
+                          file_id: fileId,
+                          reviewer_id: localStorage.getItem("userId"),
+                          rejection_description: rejectText
+                        };
+                        axios
+                          .put("http://localhost:8000/api/reviewer/reject", body, {
+                            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" }
+                          })
+                          .then((res) => {
+                            toast.success("File rejected");
+                          })
+                          .catch(() => toast.error("Reject failed"));
+                        navigate(`/reviewer/randomfiles/${projectId}/${localStorage.getItem("userId")}`);
+                      }}
+                      className="px-3 py-1 text-xs rounded-md bg-red-600 text-black font-semibold hover:bg-red-500 transition-colors"
+                    >
+                      OK
+                    </button>
                   </div>
-                )}
+                </div>
+              )}
               </div>
 
               {/* Fixed Bottom Actions */}
               <div className="flex-shrink-0 p-3 border-t border-amber-700/20 bg-gradient-to-b from-black/80 to-black/90">
+                <button
+                  onClick={handleSaveAnnotation}
+                  disabled={isSaving}
+                  className="w-full mb-2 px-2.5 py-1.5 rounded-md bg-amber-600 text-black text-xs font-semibold hover:shadow-lg transition active:scale-95 disabled:opacity-50"
+                >
+                  {isSaving ? "Saving..." : "Save"}
+                </button>
                 <div className="flex gap-1.5 w-full">
-                  <button onClick={handleSaveAnnotation} disabled={isSaving} className="flex-1 px-2.5 py-1.5 rounded-md bg-amber-600 text-black text-xs font-semibold hover:shadow-lg transition transform active:scale-95 disabled:opacity-50 min-w-0">
-                    {isSaving ? "Saving..." : "Save"}
+                  <button
+                    onClick={async () => {
+                      try {
+                        const response = await axios.put(
+                          `${API_BASE_URL}/api/reviewer/accept-annotation`,
+                          null,
+                          { params: { file_id: fileId } }
+                        );
+                        navigate(`/reviewer/randomfiles/${projectId}/${localStorage.getItem("userId")}`);
+                      } catch (error) {
+                        console.error(error);
+                      }
+                    }}
+                    className="flex-1 px-2.5 py-1.5 rounded-md bg-green-600 text-black text-xs font-semibold hover:shadow-lg transition active:scale-95 min-w-0"
+                  >
+                    Approve
                   </button>
-                  <button onClick={handleSubmitAnnotation} disabled={rectData.length === 0} className={`flex-1 px-2.5 py-1.5 rounded-md text-xs font-semibold transition min-w-0 ${rectData.length === 0 ? "bg-amber-300 text-black/60 cursor-not-allowed" : "bg-black border border-amber-500 text-amber-200 hover:bg-amber-500/10"}`}>
-                    Submit
+                  <button
+                    onClick={() => setRejectOpen(true)}
+                    className="flex-1 px-2.5 py-1.5 rounded-md bg-red-600 text-black text-xs font-semibold hover:shadow-lg transition active:scale-95 min-w-0"
+                  >
+                    Reject
                   </button>
                 </div>
-                <div className="mt-2 text-[10px] leading-tight text-amber-300/60 break-words">Tip: After drawing a box you will be prompted to choose class & attribute.</div>
+                <div className="mt-2 text-[10px] text-amber-300/60 leading-tight break-words">
+                  Tip: After drawing a box you will be prompted to choose class & attribute.
+                </div>
               </div>
             </div>
           )}
-        </aside>
+        </aside> 
+
+
+
+
       </div>
 
       {/* Modal for assign class */}

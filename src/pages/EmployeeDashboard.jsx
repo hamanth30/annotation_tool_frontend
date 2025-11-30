@@ -56,7 +56,7 @@ const EmployeeDashboard = () => {
   };
 
   const handleReviewRandom = (projectId) =>
-    navigate(`/employee/review/random/${projectId}`);
+    navigate(`/reviewer/randomfiles/${projectId}/${userId}`);
 
   const handleReviewAdmin = (projectId) =>
     navigate(`/employee/review/admin/${projectId}`);

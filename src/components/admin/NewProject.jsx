@@ -26,6 +26,8 @@ const NewProject = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const [searchQuery, setSearchQuery] = useState("");
+
   const API_BASE_URL = "http://localhost:8000";
 
   // --- Fetch Annotators ---
@@ -235,9 +237,22 @@ const NewProject = () => {
 
       {/* Team Members */}
       <div className="mb-8">
-        <h3 className="text-xl font-semibold text-amber-300 mb-4">
+        {/* <h3 className="text-xl font-semibold text-amber-300 mb-4">
           Add Team Members
-        </h3>
+        </h3> */}
+
+            <h3 className="text-xl font-semibold text-amber-300 mb-4">
+              Add Team Members
+            </h3>
+
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by email or name..."
+              className="w-full mb-4 bg-gray-800/50 border border-amber-500/30 rounded-xl px-4 py-3 text-amber-100 placeholder-amber-500/50 focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 outline-none transition-all"
+            />  
+
         {loadingUsers ? (
           <div className="flex items-center justify-center py-8 text-amber-300">
             <Loader2 className="animate-spin mr-2" size={20} />
@@ -255,29 +270,61 @@ const NewProject = () => {
           </div>
         ) : (
           <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {annotators.map((user) => (
-              <div
-                key={user.id}
-                onClick={() => toggleAnnotator(user.id)}
-                className={`flex items-center p-4 border rounded-xl cursor-pointer transition-all ${
-                  selectedAnnotators.includes(user.id)
-                    ? "bg-gradient-to-r from-amber-500/20 to-yellow-600/20 border-amber-500 shadow-lg shadow-amber-500/20"
-                    : "bg-gray-800/50 border-amber-500/30 hover:bg-gray-800/70 hover:border-amber-500/50"
-                }`}
-              >
-                <input
-                  type="checkbox"
-                  checked={selectedAnnotators.includes(user.id)}
-                  onChange={() => toggleAnnotator(user.id)}
-                  className="mr-3 h-5 w-5 accent-amber-500 cursor-pointer"
-                />
-                <User className={`mr-3 ${selectedAnnotators.includes(user.id) ? "text-amber-400" : "text-amber-500/70"}`} />
-                <div>
-                  <p className={`font-medium ${selectedAnnotators.includes(user.id) ? "text-amber-200" : "text-amber-100"}`}>{user.name}</p>
-                  <p className={`text-sm ${selectedAnnotators.includes(user.id) ? "text-amber-300/80" : "text-amber-400/60"}`}>{user.email}</p>
-                </div>
-              </div>
-            ))}
+           {annotators
+  .filter((user) =>
+    user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.email.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+  .map((user) => {
+    const isSelected = selectedAnnotators.includes(user.id);
+
+    return (
+      <div
+        key={user.id}
+        onClick={() => toggleAnnotator(user.id)}
+        className={`flex items-center p-4 border rounded-xl cursor-pointer transition-all mb-2
+        ${
+          isSelected
+            ? "bg-gradient-to-r from-amber-500/20 to-yellow-600/20 border-amber-500 shadow-lg shadow-amber-500/20"
+            : "bg-gray-800/50 border-amber-500/30 hover:bg-gray-800/70 hover:border-amber-500/50"
+        }`}
+      >
+        {/* Checkbox — stop bubbling so div click doesn't fire twice */}
+        <input
+          type="checkbox"
+          checked={isSelected}
+          onChange={(e) => {
+            e.stopPropagation();
+            toggleAnnotator(user.id);
+          }}
+          className="mr-3 h-5 w-5 accent-amber-500 cursor-pointer"
+        />
+
+        <User
+          className={`mr-3 ${
+            isSelected ? "text-amber-400" : "text-amber-500/70"
+          }`}
+        />
+
+        <div>
+          <p
+            className={`font-medium ${
+              isSelected ? "text-amber-200" : "text-amber-100"
+            }`}
+          >
+            {user.name}
+          </p>
+          <p
+            className={`text-sm ${
+              isSelected ? "text-amber-300/80" : "text-amber-400/60"
+            }`}
+          >
+            {user.email}
+          </p>
+        </div>
+      </div>
+    );
+  })}
           </div>
         )}
       </div>

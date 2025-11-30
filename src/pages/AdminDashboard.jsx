@@ -81,7 +81,7 @@ const AdminDashboard = () => {
     // { id: "removeUser", label: "Remove User", icon: <UserX size={20} /> },
 
     { id: "projectAnalytics", label: "Project Analytics", icon: <BarChart3 size={20} /> },
-    { id: "removeUser", label: "Remove User", icon: <UserX size={20} /> },
+    // { id: "removeUser", label: "Remove User", icon: <UserX size={20} /> },
 
     { id: "deleteProject", label: "Delete Project", icon: <FolderX size={20} /> },
   ];
