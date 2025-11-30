@@ -1328,6 +1328,57 @@ export default function ReviewFile() {
     if (projectId) fetchClasses();
   }, [projectId, token]);
 
+
+  // Fetch existing annotations for this file
+useEffect(() => {
+  const fetchAnnotations = async () => {
+    if (!fileId) return;
+
+    try {
+      const res = await axios.get(
+        `${API_BASE_URL}/api/general/annotations/${fileId}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+
+      const annotations = res.data?.annotations || [];
+      const latestAnnotation = annotations[annotations.length - 1];
+      let annotationData = latestAnnotation?.data || [];
+
+      // Parse if JSON string
+      if (typeof annotationData === "string") {
+        annotationData = JSON.parse(annotationData);
+      }
+
+      // Convert annotation data → rect format
+      const convertedRects = annotationData.map((box) => ({
+        id: String(box.id),
+        type: box.type || "rectangle",
+        x: Number(box.x),
+        y: Number(box.y),
+        width: Number(box.width),
+        height: Number(box.height),
+        classes: {
+          className: box.classes?.className || "",
+          attributeName: box.classes?.attributeName || "",
+          attributeValue: box.classes?.attributeValue || "",
+        },
+        color: boxColor,
+      }));
+
+      setRectData(convertedRects);
+      prevCountRef.current = convertedRects.length;
+      toast.info(`Loaded ${convertedRects.length} existing annotation(s)`);
+
+    } catch (err) {
+      if (err.response?.status !== 404) {
+        console.error("Failed to load annotations", err);
+      }
+    }
+  };
+
+  if (fileId && imageUrl) fetchAnnotations();
+}, [fileId, imageUrl, token]);
+
   // Handle rect changes from DrawRect
   const handleRectChange = (rects) => {
     const normalized = rects.map((r) => ({
