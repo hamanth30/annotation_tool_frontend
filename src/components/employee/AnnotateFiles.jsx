@@ -52,6 +52,9 @@ export default function AnnotateFile() {
   const [modalClass, setModalClass] = useState("");
   const [modalAttributeName, setModalAttributeName] = useState("");
   const [modalAttributeValue, setModalAttributeValue] = useState("");
+  const [activeShapeType, setActiveShapeType] = useState(null);
+
+
 
   // Menu bar state
   const [menuOpen, setMenuOpen] = useState(null);
@@ -159,25 +162,43 @@ export default function AnnotateFile() {
   };
 
   // Modal helpers
+  // const openModalForBox = (boxId) => {
+  //   const box = rectData.find((r) => String(r.id) === String(boxId));
+  //   if (!box) {
+  //     // If the box isn't present yet in rectData, open empty modal and set id
+  //     setModalBoxId(boxId);
+  //     setModalClass("");
+  //     setModalAttributeName("");
+  //     setModalAttributeValue("");
+  //     setModalOpen(true);
+  //     setAnnotateTab("edit");
+  //     return;
+  //   }
+  //   setModalBoxId(boxId);
+  //   setModalClass(box.classes?.className || "");
+  //   setModalAttributeName(box.classes?.attributeName || "");
+  //   setModalAttributeValue(box.classes?.attributeValue || "");
+  //   setModalOpen(true);
+  //   setAnnotateTab("edit");
+  // };
+
   const openModalForBox = (boxId) => {
-    const box = rectData.find((r) => String(r.id) === String(boxId));
-    if (!box) {
-      // If the box isn't present yet in rectData, open empty modal and set id
-      setModalBoxId(boxId);
-      setModalClass("");
-      setModalAttributeName("");
-      setModalAttributeValue("");
-      setModalOpen(true);
-      setAnnotateTab("edit");
-      return;
-    }
-    setModalBoxId(boxId);
-    setModalClass(box.classes?.className || "");
-    setModalAttributeName(box.classes?.attributeName || "");
-    setModalAttributeValue(box.classes?.attributeValue || "");
-    setModalOpen(true);
-    setAnnotateTab("edit");
-  };
+  const box = rectData.find((r) => String(r.id) === String(boxId));
+
+  if (box?.type) {
+    setActiveShapeType(box.type);
+  } else {
+    setActiveShapeType(toolMode);
+  }
+
+  setModalBoxId(boxId);
+  setModalClass(box?.classes?.className || "");
+  setModalAttributeName(box?.classes?.attributeName || "");
+  setModalAttributeValue(box?.classes?.attributeValue || "");
+  setModalOpen(true);
+  setAnnotateTab("edit");
+};
+
 
   const closeModal = () => {
     setModalOpen(false);
@@ -268,6 +289,7 @@ export default function AnnotateFile() {
     }
     try {
       setIsSaving(true);
+      console.log(rectData)
       const payload = {
         data: rectData.map((b) => {
           const baseData = {
@@ -828,7 +850,12 @@ export default function AnnotateFile() {
               <label className="block text-xs font-medium mb-1 text-amber-200">Class</label>
               <select value={modalClass} onChange={(e) => { setModalClass(e.target.value); setModalAttributeName(""); setModalAttributeValue(""); }} className="w-full bg-black/60 border border-amber-600 rounded px-3 py-2 text-amber-100 text-xs">
                 <option value="">Select class</option>
-                {classes.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}
+                {/* {classes.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)} */}
+                {classes
+                    .filter((c) => c.shape === activeShapeType)  // 🔥 FILTER HERE
+                    .map((c) => (
+                      <option key={c.name} value={c.name}>{c.name}</option>
+                    ))}
               </select>
             </div>
 
