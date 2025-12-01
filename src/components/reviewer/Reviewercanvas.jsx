@@ -1243,6 +1243,7 @@ export default function ReviewFile() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [projectName, setProjectName] = useState("");
 
   // Annotate panel + modal state
   const [annotateTab, setAnnotateTab] = useState("create");
@@ -1332,6 +1333,53 @@ export default function ReviewFile() {
       }
     };
     if (projectId) fetchClasses();
+  }, [projectId, token]);
+
+  // Fetch project name
+  useEffect(() => {
+    const fetchProjectName = async () => {
+      if (!projectId) {
+        setProjectName("");
+        return;
+      }
+      try {
+        // Try to fetch from user projects endpoint
+        const userId = localStorage.getItem("userId");
+        const res = await axios.get(
+          `${API_BASE_URL}/api/employee/user_projects/${userId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const projects = res.data || [];
+        console.log("Reviewer: Fetched projects for name lookup:", projects);
+        console.log("Reviewer: Looking for projectId:", projectId, "Type:", typeof projectId);
+        console.log("Reviewer: Project IDs in array:", projects.map(p => ({ id: p.id, type: typeof p.id, name: p.name })));
+        
+        // Try multiple comparison methods to handle different ID types
+        const project = projects.find((p) => {
+          // Try direct comparison
+          if (p.id === projectId) return true;
+          // Try string comparison
+          if (String(p.id) === String(projectId)) return true;
+          // Try number comparison (in case one is number and other is string number)
+          if (Number(p.id) === Number(projectId) && !isNaN(Number(p.id)) && !isNaN(Number(projectId))) return true;
+          // Try project_id field if it exists
+          if (p.project_id && (String(p.project_id) === String(projectId) || p.project_id === projectId)) return true;
+          return false;
+        });
+        
+        console.log("Reviewer: Found project:", project, "for projectId:", projectId);
+        if (project && project.name) {
+          setProjectName(project.name);
+        } else {
+          console.warn("Reviewer: Project not found or has no name. Available projects:", projects.map(p => ({ id: p.id, name: p.name })));
+          setProjectName(""); // Set to empty string if not found
+        }
+      } catch (err) {
+        console.error("Failed to load project name", err);
+        setProjectName(""); // Set to empty string on error
+      }
+    };
+    if (projectId && token) fetchProjectName();
   }, [projectId, token]);
 
   // Fetch existing annotations for this file
@@ -1518,7 +1566,7 @@ export default function ReviewFile() {
       } finally {
         setIsSaving(false);
       }
-    }, 2000); // 2 second debounce
+    }, 300000); // 5 minute debounce
 
     // Cleanup: clear timer if rectData changes again before the timer completes
     return () => {
@@ -2052,7 +2100,7 @@ export default function ReviewFile() {
       </div>
 
       {/* ===== Main Area ===== */}
-      <div className="max-w-[1400px] mx-auto flex gap-6">
+      <div className="max-w-[1400px] mx-auto flex gap-6 ml-16">
         {/* Canvas Column */}
         <div className="flex flex-col items-start grow-[1]">
           <div className="flex items-center gap-3 mb-4">
@@ -2405,8 +2453,15 @@ export default function ReviewFile() {
               </button>
             </div>
 
-            <div className="text-xs text-amber-200 mb-4">
-              <strong className="text-amber-300">Project name:</strong> (static name or fetch from API)
+            <div className="text-xs text-amber-200 mb-4 flex items-center justify-between group">
+              <div>
+                <strong className="text-amber-300">Project name:</strong> {projectName || "N/A"}
+              </div>
+              {projectName && (
+                <button onClick={() => copyToClipboard(projectName, "Project name")} className="p-1.5 hover:bg-amber-600/20 rounded transition-colors opacity-0 group-hover:opacity-100" title="Copy Project name">
+                  <Copy size={14} className="text-amber-300" />
+                </button>
+              )}
             </div>
 
             <div className="flex justify-end gap-2">
