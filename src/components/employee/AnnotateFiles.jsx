@@ -222,6 +222,17 @@ export default function AnnotateFile() {
     openModalForBox(boxId);
   };
 
+  // Copy ID to clipboard
+  const handleCopyId = async (id) => {
+    try {
+      await navigator.clipboard.writeText(id);
+      toast.success(`ID copied: ${id}`);
+    } catch (err) {
+      console.error("Failed to copy ID:", err);
+      toast.error("Failed to copy ID");
+    }
+  };
+
   // Menu actions
   const openFileUrlInNewTab = () => {
     if (!imageUrl) {
@@ -774,6 +785,16 @@ export default function AnnotateFile() {
                                 {r.classes?.attributeName
                                   ? `${r.classes.attributeName}: ${r.classes.attributeValue || "-"}`
                                   : "No attribute"}
+                              </div>
+                              <div className="flex items-center gap-1.5 mt-1">
+                                <span className="text-xs text-amber-400/60 font-mono">ID: {r.id}</span>
+                                <button
+                                  onClick={() => handleCopyId(r.id)}
+                                  title="Copy ID"
+                                  className="p-0.5 text-amber-400/60 hover:text-amber-300 transition-colors"
+                                >
+                                  <Copy size={12} />
+                                </button>
                               </div>
                             </div>
                             <div className="flex items-center gap-1.5 flex-shrink-0">

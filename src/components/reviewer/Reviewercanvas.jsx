@@ -1637,6 +1637,17 @@ export default function ReviewFile() {
     openModalForBox(boxId);
   };
 
+  // Copy ID to clipboard
+  const handleCopyId = async (id) => {
+    try {
+      await navigator.clipboard.writeText(id);
+      toast.success(`ID copied: ${id}`);
+    } catch (err) {
+      console.error("Failed to copy ID:", err);
+      toast.error("Failed to copy ID");
+    }
+  };
+
   // Menu actions
   const openFileUrlInNewTab = () => {
     if (!imageUrl) {
@@ -2133,6 +2144,16 @@ export default function ReviewFile() {
                           <div>
                             <div className="text-sm font-medium text-amber-100">{idx + 1}. {r.classes?.className || "—"}</div>
                             <div className="text-xs text-amber-300/70">{r.classes?.attributeName ? `${r.classes.attributeName}: ${r.classes.attributeValue || "-"}` : "No attribute"}</div>
+                            <div className="flex items-center gap-1.5 mt-1">
+                              <span className="text-xs text-amber-400/60 font-mono">ID: {r.id}</span>
+                              <button
+                                onClick={() => handleCopyId(r.id)}
+                                title="Copy ID"
+                                className="p-0.5 text-amber-400/60 hover:text-amber-300 transition-colors"
+                              >
+                                <Copy size={12} />
+                              </button>
+                            </div>
                           </div>
                           <div className="flex items-center gap-2">
                             <button onClick={() => onEditPencilClick(r.id)} title="Edit box" className="p-1 text-amber-200/90 hover:text-amber-100"><Pencil size={16} /></button>
