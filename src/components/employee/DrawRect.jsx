@@ -228,6 +228,8 @@ export default function DrawRect({
       );
       onChange && onChange(updated);
     } else if (shape.type === "polygon" || shape.type === "polyline") {
+      // For polygons/polylines, the Group is positioned at minX/minY
+      // So we need to update all points by the drag offset
       const dx = node.x();
       const dy = node.y();
       const updatedPoints = (shape.points || []).map((p, i) => 
@@ -237,6 +239,7 @@ export default function DrawRect({
         r.id === id ? { ...r, points: updatedPoints } : r
       );
       onChange && onChange(updated);
+      // Reset group position to maintain relative positioning
       node.x(0);
       node.y(0);
     }
@@ -250,24 +253,77 @@ export default function DrawRect({
     isTransformingRef.current = false;
 
     const node = e.target;
-    const scaleX = node.scaleX();
-    const scaleY = node.scaleY();
+    const shape = rectData.find((r) => r.id === id);
+    if (!shape) return;
 
-    // Get the current rect data to preserve width/height
-    const currentRect = rectData.find((r) => r.id === id);
-    if (!currentRect) return;
+    // Handle rectangles
+    if (shape.type === "rectangle" || !shape.type) {
+      const scaleX = node.scaleX();
+      const scaleY = node.scaleY();
+      const newWidth = Math.max(10, shape.width * scaleX);
+      const newHeight = Math.max(10, shape.height * scaleY);
 
-    const newWidth = Math.max(10, currentRect.width * scaleX);
-    const newHeight = Math.max(10, currentRect.height * scaleY);
+      // Reset scale
+      node.scaleX(1);
+      node.scaleY(1);
 
-    // Reset scale
-    node.scaleX(1);
-    node.scaleY(1);
+      const updated = rectData.map((r) =>
+        r.id === id ? { ...r, x: node.x(), y: node.y(), width: newWidth, height: newHeight } : r
+      );
+      onChange && onChange(updated);
+    } 
+    // Handle polygons and polylines
+    else if (shape.type === "polygon" || shape.type === "polyline") {
+      const scaleX = node.scaleX();
+      const scaleY = node.scaleY();
+      const dx = node.x(); // Offset from original Group position
+      const dy = node.y();
 
-    const updated = rectData.map((r) =>
-      r.id === id ? { ...r, x: node.x(), y: node.y(), width: newWidth, height: newHeight } : r
-    );
-    onChange && onChange(updated);
+      // Get original points
+      const points = shape.points || [];
+      if (points.length === 0) return;
+
+      // Find original bounding box (before transform)
+      let origMinX = points[0];
+      let origMinY = points[1];
+      let origMaxX = points[0];
+      let origMaxY = points[1];
+      for (let i = 0; i < points.length; i += 2) {
+        origMinX = Math.min(origMinX, points[i]);
+        origMaxX = Math.max(origMaxX, points[i]);
+        origMinY = Math.min(origMinY, points[i + 1]);
+        origMaxY = Math.max(origMaxY, points[i + 1]);
+      }
+      const origCenterX = (origMinX + origMaxX) / 2;
+      const origCenterY = (origMinY + origMaxY) / 2;
+
+      // New Group position (original minX/minY + drag offset)
+      const newMinX = origMinX + dx;
+      const newMinY = origMinY + dy;
+
+      // Apply transformation: scale around center, then translate
+      const updatedPoints = [];
+      for (let i = 0; i < points.length; i += 2) {
+        const px = points[i];
+        const py = points[i + 1];
+        // Scale relative to original center, then adjust for new position
+        const scaledX = (px - origCenterX) * scaleX + origCenterX;
+        const scaledY = (py - origCenterY) * scaleY + origCenterY;
+        // Translate by the drag offset
+        updatedPoints.push(scaledX + dx, scaledY + dy);
+      }
+
+      // Reset node transform
+      node.scaleX(1);
+      node.scaleY(1);
+      node.x(0);
+      node.y(0);
+
+      const updated = rectData.map((r) =>
+        r.id === id ? { ...r, points: updatedPoints } : r
+      );
+      onChange && onChange(updated);
+    }
   };
 
   return (
@@ -325,27 +381,55 @@ export default function DrawRect({
           // Render polygons and polylines
           if (shape.type === "polygon" || shape.type === "polyline") {
             const points = shape.points || [];
+            if (points.length === 0) return null;
+            
             const isSelected = selectedId === shape.id;
+            
+            // Calculate bounding box for transformer
+            let minX = points[0];
+            let minY = points[1];
+            let maxX = points[0];
+            let maxY = points[1];
+            for (let i = 0; i < points.length; i += 2) {
+              minX = Math.min(minX, points[i]);
+              maxX = Math.max(maxX, points[i]);
+              minY = Math.min(minY, points[i + 1]);
+              maxY = Math.max(maxY, points[i + 1]);
+            }
+            const width = Math.max(1, maxX - minX);
+            const height = Math.max(1, maxY - minY);
+            
+            // Convert absolute points to relative points for rendering in Group
+            const relativePoints = [];
+            for (let i = 0; i < points.length; i += 2) {
+              relativePoints.push(points[i] - minX, points[i + 1] - minY);
+            }
             
             return (
               <Group
                 key={shape.id}
                 id={`poly-${shape.id}`}
+                x={minX}
+                y={minY}
+                width={width}
+                height={height}
                 draggable={mode !== "cursor"}
                 onDragStart={handleDragStart}
                 onDragEnd={handleDragEnd}
                 onDragMove={(e) => handleDragMove(shape.id, e)}
+                onTransformStart={handleTransformStart}
+                onTransformEnd={(e) => handleTransformEnd(shape.id, e)}
               >
                 {shape.type === "polygon" ? (
                   <Shape
-                    sceneFunc={(context, shape) => {
+                    sceneFunc={(context, shapeNode) => {
                       context.beginPath();
-                      context.moveTo(points[0], points[1]);
-                      for (let i = 2; i < points.length; i += 2) {
-                        context.lineTo(points[i], points[i + 1]);
+                      context.moveTo(relativePoints[0], relativePoints[1]);
+                      for (let i = 2; i < relativePoints.length; i += 2) {
+                        context.lineTo(relativePoints[i], relativePoints[i + 1]);
                       }
                       context.closePath();
-                      context.fillStrokeShape(shape);
+                      context.fillStrokeShape(shapeNode);
                     }}
                     fill={isSelected ? "rgba(166,124,0,0.12)" : "rgba(166,124,0,0.06)"}
                     stroke={isSelected ? "#ab7a00" : (shape.color || boxColor)}
@@ -353,18 +437,26 @@ export default function DrawRect({
                   />
                 ) : (
                   <Line
-                    points={points}
+                    points={relativePoints}
                     fill={isSelected ? "rgba(166,124,0,0.12)" : "rgba(166,124,0,0.06)"}
                     stroke={isSelected ? "#ab7a00" : (shape.color || boxColor)}
                     strokeWidth={2}
                     closed={false}
                   />
                 )}
-                {points.length > 0 && (
+                {/* Invisible rect for transformer to attach to - provides bounding box */}
+                <Rect
+                  width={width}
+                  height={height}
+                  fill="transparent"
+                  stroke="transparent"
+                  listening={false}
+                />
+                {relativePoints.length > 0 && (
                   <Text 
                     text={`#${idx + 1}`} 
-                    x={points[0] + 6} 
-                    y={points[1] - 18} 
+                    x={relativePoints[0] + 6} 
+                    y={relativePoints[1] - 18} 
                     fontSize={13} 
                     fill="#d4a800" 
                   />
