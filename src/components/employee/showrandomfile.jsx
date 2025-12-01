@@ -63,7 +63,7 @@ const RandomAssignedFiles = () => {
         {
           state: { 
             imageUrl: file_url,
-            fromRandomAssign: true 
+            fromRandomAssign: true
           }
         }
       );
