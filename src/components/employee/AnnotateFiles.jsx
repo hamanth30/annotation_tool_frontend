@@ -131,6 +131,110 @@ export default function AnnotateFile() {
     if (projectId) fetchClasses();
   }, [projectId, token]);
 
+  // Fetch existing annotations for this file
+  useEffect(() => {
+    const fetchAnnotations = async () => {
+      if (!fileId) return;
+
+      try {
+        const res = await axios.get(
+          `${API_BASE_URL}/api/general/annotations/${fileId}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+
+        console.log("Employee: fetched annotations response", res.data);
+
+        const annotations = res.data?.annotations || [];
+
+        if (annotations.length === 0) {
+          console.log("Employee: no annotations found for this file");
+          return;
+        }
+
+        // Take the last annotation entry
+        const latestAnnotation = annotations[annotations.length - 1];
+        let annotationData = latestAnnotation?.data || [];
+
+        // In case backend stores JSON as string, attempt to parse
+        if (typeof annotationData === "string") {
+          try {
+            annotationData = JSON.parse(annotationData);
+          } catch (e) {
+            console.error(
+              "Employee: failed to parse annotation data JSON string",
+              e
+            );
+            annotationData = [];
+          }
+        }
+
+        if (!Array.isArray(annotationData)) {
+          console.warn(
+            "Employee: annotation data is not an array, got:",
+            annotationData
+          );
+          return;
+        }
+
+        // Convert annotation data to rectData format
+        const convertedRects = annotationData.map((box) => {
+          const baseShape = {
+            id: String(box.id),
+            type: box.type || "rectangle",
+            classes: {
+              className: box.classes?.className || "",
+              attributeName: box.classes?.attributeName || "",
+              attributeValue: box.classes?.attributeValue || "",
+            },
+            color: boxColor,
+          };
+
+          // Handle rectangles
+          if (box.type === "rectangle" || !box.type) {
+            return {
+              ...baseShape,
+              x: Number(box.x),
+              y: Number(box.y),
+              width: Number(box.width),
+              height: Number(box.height),
+            };
+          }
+
+          // Handle polygons and polylines
+          if (box.type === "polygon" || box.type === "polyline") {
+            return {
+              ...baseShape,
+              points: Array.isArray(box.points) ? box.points.map(Number) : [],
+            };
+          }
+
+          return baseShape;
+        });
+
+        console.log("Employee: converted rects", convertedRects);
+
+        setRectData(convertedRects);
+        prevCountRef.current = convertedRects.length;
+
+        if (convertedRects.length > 0) {
+          toast.info(`Loaded ${convertedRects.length} existing annotation(s)`);
+        }
+      } catch (err) {
+        // If no annotations found (404), that's okay - file might be new
+        if (err.response?.status !== 404) {
+          console.error("Employee: failed to load annotations", err);
+        } else {
+          console.log("Employee: no annotations (404) for this file yet");
+        }
+      }
+    };
+
+    if (fileId && imageUrl) {
+      fetchAnnotations();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fileId, imageUrl, token]);
+
   // Handle rect changes from DrawRect
   const handleRectChange = (rects) => {
     const normalized = rects.map((r) => ({

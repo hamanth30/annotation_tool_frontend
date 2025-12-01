@@ -1201,6 +1201,7 @@ import {
   Square,
   Hexagon,
   Palette,
+  Minus,
 } from "lucide-react";
 
 const API_BASE_URL = "http://localhost:8000";
@@ -1781,8 +1782,8 @@ export default function ReviewFile() {
     }
   };
 
-  // dynamic canvas width per Option 1
-  const canvasWidth = panelVisible ? 920 : 1240;
+  // dynamic canvas width per Option 1 (must match AnnotateFiles.jsx for alignment)
+  const canvasWidth = panelVisible ? 860 : 1240;
 
   // Render loading state
   if (loading) {
@@ -1844,19 +1845,34 @@ export default function ReviewFile() {
             <Square size={20} />
           </button>
 
-          {/* Polygon Tool (non-functional per Option A) */}
+          {/* Polyline Tool */}
+          <button
+            onClick={() => {
+              setToolMode("polyline");
+              setDrawEnabled(true);
+            }}
+            className={`p-3 rounded-md transition-all duration-200 ${
+              toolMode === "polyline"
+                ? "bg-amber-600 text-black shadow-lg"
+                : "bg-black/60 border border-amber-600/20 text-amber-300 hover:bg-amber-800/30"
+            }`}
+            title="Polyline (Draw connected lines)"
+          >
+            <Minus size={20} />
+          </button>
+
+          {/* Polygon Tool */}
           <button
             onClick={() => {
               setToolMode("polygon");
-              setDrawEnabled(false);
-              toast.info("Polygon mode selected (polygon drawing not implemented).");
+              setDrawEnabled(true);
             }}
             className={`p-3 rounded-md transition-all duration-200 ${
               toolMode === "polygon"
                 ? "bg-amber-600 text-black shadow-lg"
                 : "bg-black/60 border border-amber-600/20 text-amber-300 hover:bg-amber-800/30"
             }`}
-            title="Polygon (Not implemented)"
+            title="Polygon (Draw closed shapes)"
           >
             <Hexagon size={20} />
           </button>
