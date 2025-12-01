@@ -16,6 +16,7 @@ const NewProject = () => {
   const [description, setDescription] = useState("");
   const [classes, setClasses] = useState([]);
   const [newClassName, setNewClassName] = useState("");
+  const [newClassShape, setNewClassShape] = useState("rectangle");
 
   const [selectedAnnotators, setSelectedAnnotators] = useState([]);
   const [uploadedImages, setUploadedImages] = useState([]);
@@ -116,8 +117,13 @@ const NewProject = () => {
   // --- Class + Attribute logic ---
   const handleAddClass = () => {
     if (!newClassName.trim()) return;
-    setClasses([...classes, { name: newClassName.trim(), attributes: {} }]);
+    setClasses([...classes, { 
+      name: newClassName.trim(), 
+      shape: newClassShape,
+      attributes: {} 
+    }]);
     setNewClassName("");
+    setNewClassShape("rectangle"); // Reset to default
   };
 
   const handleRemoveClass = (index) => {
@@ -148,6 +154,12 @@ const NewProject = () => {
   const handleRemoveAttribute = (classIndex, attrKey) => {
     const updated = [...classes];
     delete updated[classIndex].attributes[attrKey];
+    setClasses(updated);
+  };
+
+  const handleUpdateClassShape = (classIndex, newShape) => {
+    const updated = [...classes];
+    updated[classIndex].shape = newShape;
     setClasses(updated);
   };
 
@@ -336,7 +348,7 @@ const NewProject = () => {
         </h3>
 
         {/* Add Class Input */}
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-3 mb-4 flex-wrap">
           <input
             type="text"
             value={newClassName}
@@ -344,6 +356,15 @@ const NewProject = () => {
             placeholder="Enter class name"
             className="bg-gray-800/50 border border-amber-500/30 rounded-xl px-4 py-2 w-64 text-amber-100 placeholder-amber-500/50 focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 outline-none transition-all"
           />
+          <select
+            value={newClassShape}
+            onChange={(e) => setNewClassShape(e.target.value)}
+            className="bg-gray-800/50 border border-amber-500/30 rounded-xl px-4 py-2 text-amber-100 focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 outline-none transition-all"
+          >
+            <option value="rectangle" className="bg-gray-800">rectangle</option>
+            <option value="polyline" className="bg-gray-800">polyline</option>
+            <option value="polygon" className="bg-gray-800">polygon</option>
+          </select>
           <button
             onClick={handleAddClass}
             className="px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-black rounded-xl font-semibold transition-all"
@@ -356,7 +377,18 @@ const NewProject = () => {
         {classes.map((cls, index) => (
           <div key={index} className="border border-amber-500/30 rounded-xl p-4 mb-4 bg-gray-800/50 backdrop-blur-sm">
             <div className="flex justify-between items-center mb-2">
-              <h4 className="font-semibold text-amber-300 text-lg">{cls.name}</h4>
+              <div className="flex items-center gap-3">
+                <h4 className="font-semibold text-amber-300 text-lg">{cls.name}</h4>
+                <select
+                  value={cls.shape || "rectangle"}
+                  onChange={(e) => handleUpdateClassShape(index, e.target.value)}
+                  className="bg-gray-700/50 border border-amber-500/30 rounded-lg px-3 py-1 text-sm text-amber-100 focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 outline-none transition-all"
+                >
+                  <option value="rectangle" className="bg-gray-800">Rectangle</option>
+                  <option value="polyline" className="bg-gray-800">Polyline</option>
+                  <option value="polygon" className="bg-gray-800">Polygon</option>
+                </select>
+              </div>
               <button
                 onClick={() => handleRemoveClass(index)}
                 className="text-red-400 hover:text-red-300 font-medium transition-colors"

@@ -1256,6 +1256,8 @@ export default function ReviewFile() {
   // Menu bar state
   const [menuOpen, setMenuOpen] = useState(null);
   const [showTaskModal, setShowTaskModal] = useState(false);
+  const [showAnnotationDataModal, setShowAnnotationDataModal] = useState(false);
+  const [viewingPointsFor, setViewingPointsFor] = useState(null);
 
   // Edit options state
   const [drawEnabled, setDrawEnabled] = useState(true);
@@ -2043,6 +2045,13 @@ export default function ReviewFile() {
                       >
                         {panelVisible ? "Hide panel" : "Show panel"}
                       </button>
+
+                      <button
+                        onClick={() => { setShowAnnotationDataModal(true); setMenuOpen(null); }}
+                        className="w-full px-4 py-2.5 text-left text-amber-100 hover:bg-amber-600/20 hover:text-amber-200 transition-colors"
+                      >
+                        View annotation data
+                      </button>
                     </div>
                   </div>
                 )}
@@ -2121,45 +2130,6 @@ export default function ReviewFile() {
             />
           </div>
 
-          {/* Annotation details table */}
-          <div className="mt-6 w-full">
-            <h3 className="text-lg font-semibold text-amber-100 mb-3">Annotation Details</h3>
-
-            {rectData.length === 0 ? (
-              <p className="text-amber-300/60 text-sm">No boxes drawn yet. Draw a box to begin.</p>
-            ) : (
-              <div className="overflow-hidden rounded-xl border border-amber-600 shadow-inner bg-black/40">
-                <table className="min-w-full text-sm text-left">
-                  <thead className="bg-amber-900/20 text-amber-100 font-semibold">
-                    <tr>
-                      <th className="px-4 py-3">#</th>
-                      <th className="px-4 py-3">X</th>
-                      <th className="px-4 py-3">Y</th>
-                      <th className="px-4 py-3">Width</th>
-                      <th className="px-4 py-3">Height</th>
-                      <th className="px-4 py-3">Class</th>
-                      <th className="px-4 py-3">Attribute Name</th>
-                      <th className="px-4 py-3">Attribute Value</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-amber-700/30">
-                    {rectData.map((box, index) => (
-                      <tr key={box.id} className={`${index % 2 === 0 ? "bg-black/30" : "bg-black/20"} hover:bg-amber-900/30 transition`}>
-                        <td className="px-4 py-3 font-medium text-amber-100">{index + 1}</td>
-                        <td className="px-4 py-3 text-amber-200">{Number(box.x).toFixed(1)}</td>
-                        <td className="px-4 py-3 text-amber-200">{Number(box.y).toFixed(1)}</td>
-                        <td className="px-4 py-3 text-amber-200">{Number(box.width).toFixed(1)}</td>
-                        <td className="px-4 py-3 text-amber-200">{Number(box.height).toFixed(1)}</td>
-                        <td className="px-4 py-3 font-semibold text-amber-400">{box.classes?.className || "-"}</td>
-                        <td className="px-4 py-3 text-amber-300">{box.classes?.attributeName || "-"}</td>
-                        <td className="px-4 py-3 text-amber-300">{box.classes?.attributeValue || "-"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
         </div>
 
         {/* Annotate Panel (right) */}
@@ -2470,6 +2440,151 @@ export default function ReviewFile() {
           </div>
         </div>
       )}
+
+      {/* Annotation Data Modal */}
+      {showAnnotationDataModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/60" onClick={() => setShowAnnotationDataModal(false)} />
+          <div className="relative bg-gradient-to-b from-neutral-900 to-black rounded-lg shadow-2xl w-[90vw] max-w-6xl max-h-[90vh] overflow-hidden z-10 border border-amber-600/40 flex flex-col">
+            <div className="flex-shrink-0 p-4 border-b border-amber-700/30">
+              <h4 className="text-lg font-semibold text-amber-100">Annotation Data</h4>
+            </div>
+            <div className="flex-1 overflow-auto p-4">
+              {rectData.length === 0 ? (
+                <p className="text-amber-300/60 text-center py-8">No annotations drawn yet.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm text-left">
+                    <thead className="bg-amber-900/20 text-amber-100 font-semibold sticky top-0">
+                      <tr>
+                        <th className="px-4 py-3">#</th>
+                        <th className="px-4 py-3">ID</th>
+                        <th className="px-4 py-3">Type</th>
+                        <th className="px-4 py-3">X</th>
+                        <th className="px-4 py-3">Y</th>
+                        <th className="px-4 py-3">Width</th>
+                        <th className="px-4 py-3">Height</th>
+                        <th className="px-4 py-3">Points</th>
+                        <th className="px-4 py-3">Class</th>
+                        <th className="px-4 py-3">Attribute Name</th>
+                        <th className="px-4 py-3">Attribute Value</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-amber-700/30">
+                      {rectData.map((box, index) => (
+                        <tr key={box.id} className={`${index % 2 === 0 ? "bg-black/30" : "bg-black/20"} hover:bg-amber-900/30 transition`}>
+                          <td className="px-4 py-3 font-medium text-amber-100">{index + 1}</td>
+                          <td className="px-4 py-3 text-amber-200 font-mono text-xs">{box.id}</td>
+                          <td className="px-4 py-3 text-amber-300 capitalize">{box.type || "rectangle"}</td>
+                          {box.type === "rectangle" || !box.type ? (
+                            <>
+                              <td className="px-4 py-3 text-amber-200">{Number(box.x || 0).toFixed(1)}</td>
+                              <td className="px-4 py-3 text-amber-200">{Number(box.y || 0).toFixed(1)}</td>
+                              <td className="px-4 py-3 text-amber-200">{Number(box.width || 0).toFixed(1)}</td>
+                              <td className="px-4 py-3 text-amber-200">{Number(box.height || 0).toFixed(1)}</td>
+                              <td className="px-4 py-3 text-amber-300/60">-</td>
+                            </>
+                          ) : (
+                            <>
+                              <td className="px-4 py-3 text-amber-300/60">-</td>
+                              <td className="px-4 py-3 text-amber-300/60">-</td>
+                              <td className="px-4 py-3 text-amber-300/60">-</td>
+                              <td className="px-4 py-3 text-amber-300/60">-</td>
+                              <td className="px-4 py-3">
+                                {Array.isArray(box.points) && box.points.length > 0 ? (
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-amber-200 font-mono text-xs">{`${box.points.length / 2} points`}</span>
+                                    <button
+                                      onClick={() => setViewingPointsFor(box.id)}
+                                      className="px-2 py-1 text-xs bg-amber-600/20 hover:bg-amber-600/30 text-amber-200 rounded border border-amber-600/50 transition-colors"
+                                      title="View points data"
+                                    >
+                                      View
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <span className="text-amber-300/60">-</span>
+                                )}
+                              </td>
+                            </>
+                          )}
+                          <td className="px-4 py-3 font-semibold text-amber-400">{box.classes?.className || "-"}</td>
+                          <td className="px-4 py-3 text-amber-300">{box.classes?.attributeName || "-"}</td>
+                          <td className="px-4 py-3 text-amber-300">{box.classes?.attributeValue || "-"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+            <div className="flex-shrink-0 p-4 border-t border-amber-700/30 flex justify-end">
+              <button onClick={() => setShowAnnotationDataModal(false)} className="px-4 py-2 rounded-md border border-amber-600 text-amber-200 text-sm hover:bg-amber-600/20 transition-colors">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Points Data Modal */}
+      {viewingPointsFor && (() => {
+        const shape = rectData.find(b => b.id === viewingPointsFor);
+        if (!shape || !Array.isArray(shape.points) || shape.points.length === 0) {
+          setViewingPointsFor(null);
+          return null;
+        }
+        const pointPairs = [];
+        for (let i = 0; i < shape.points.length; i += 2) {
+          pointPairs.push({ x: shape.points[i], y: shape.points[i + 1] });
+        }
+        return (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center">
+            <div className="absolute inset-0 bg-black/70" onClick={() => setViewingPointsFor(null)} />
+            <div className="relative bg-gradient-to-b from-neutral-900 to-black rounded-lg shadow-2xl w-[90vw] max-w-4xl max-h-[80vh] overflow-hidden z-10 border border-amber-600/40 flex flex-col">
+              <div className="flex-shrink-0 p-4 border-b border-amber-700/30 flex items-center justify-between">
+                <h4 className="text-lg font-semibold text-amber-100">
+                  Points Data - {shape.type || "shape"} (ID: {shape.id})
+                </h4>
+                <button
+                  onClick={() => copyToClipboard(JSON.stringify(shape.points, null, 2), "Points data")}
+                  className="px-3 py-1.5 text-xs bg-amber-600/20 hover:bg-amber-600/30 text-amber-200 rounded border border-amber-600/50 transition-colors"
+                >
+                  Copy All Points
+                </button>
+              </div>
+              <div className="flex-1 overflow-auto p-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {pointPairs.map((point, idx) => (
+                    <div
+                      key={idx}
+                      className="p-3 rounded-md border border-amber-700/30 bg-black/40 hover:border-amber-500 transition-all"
+                    >
+                      <div className="text-xs text-amber-300/70 mb-1">Point {idx + 1}</div>
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-sm font-mono text-amber-200">
+                          X: {Number(point.x).toFixed(2)}
+                        </div>
+                        <div className="text-sm font-mono text-amber-200">
+                          Y: {Number(point.y).toFixed(2)}
+                        </div>
+                        <button
+                          onClick={() => copyToClipboard(`(${Number(point.x).toFixed(2)}, ${Number(point.y).toFixed(2)})`, `Point ${idx + 1}`)}
+                          className="p-1 text-amber-400/60 hover:text-amber-300 transition-colors"
+                          title="Copy point"
+                        >
+                          <Copy size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="flex-shrink-0 p-4 border-t border-amber-700/30 flex justify-end">
+                <button onClick={() => setViewingPointsFor(null)} className="px-4 py-2 rounded-md border border-amber-600 text-amber-200 text-sm hover:bg-amber-600/20 transition-colors">Close</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
