@@ -65,6 +65,7 @@ export default function ReviewFile() {
   const [modalClass, setModalClass] = useState("");
   const [modalAttributeName, setModalAttributeName] = useState("");
   const [modalAttributeValue, setModalAttributeValue] = useState("");
+  const [activeShapeType, setActiveShapeType] = useState(null);
 
   // Menu bar state
   const [menuOpen, setMenuOpen] = useState(null);
@@ -1190,7 +1191,12 @@ export default function ReviewFile() {
               <label className="block text-xs font-medium mb-1 text-amber-200">Class</label>
               <select value={modalClass} onChange={(e) => { setModalClass(e.target.value); setModalAttributeName(""); setModalAttributeValue(""); }} className="w-full bg-black/60 border border-amber-600 rounded px-3 py-2 text-amber-100 text-xs">
                 <option value="">Select class</option>
-                {classes.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)}
+                {/* {classes.map((c) => <option key={c.name} value={c.name}>{c.name}</option>)} */}
+                {classes
+                    .filter((c) => c.shape === activeShapeType)  // 🔥 FILTER HERE
+                    .map((c) => (
+                      <option key={c.name} value={c.name}>{c.name}</option>
+                    ))}
               </select>
             </div>
 
