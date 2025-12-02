@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { SunIcon, MoonIcon } from "lucide-react";
+import { SunIcon, MoonIcon, Lock, User } from "lucide-react";
 import axios from "axios";
 import { jwtDecode } from "jwt-decode";
 import { useNavigate } from "react-router-dom";
+import loginBg from "../assets/annotation_tool_login.png";
 
 export default function Login() {
   const [isDark, setIsDark] = useState(false);
@@ -80,84 +81,122 @@ export default function Login() {
 
   return (
     <div
-      className={`min-h-screen flex flex-col items-center justify-center transition-all duration-500 ${
-        isDark ? "bg-gray-900 text-white" : "bg-white text-gray-900"
-      }`}
+      className="min-h-screen flex flex-col items-center justify-center relative overflow-hidden"
+      style={{
+        backgroundImage: `url(${loginBg})`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }}
     >
+      {/* Dark overlay for better readability */}
+      <div className="absolute inset-0 bg-gradient-to-br from-black/80 via-black/70 to-black/80 backdrop-blur-sm"></div>
+
       {/* Theme Toggle */}
       <button
         onClick={toggleTheme}
-        className="absolute top-5 right-5 p-2 rounded-full transition-colors duration-300 hover:bg-gray-200 dark:hover:bg-gray-800"
+        className="absolute top-6 right-6 z-20 p-3 rounded-full bg-black/40 backdrop-blur-md border border-amber-500/30 transition-all duration-300 hover:bg-black/60 hover:border-amber-500/50 hover:scale-110 shadow-lg"
+        aria-label="Toggle theme"
       >
         {isDark ? (
-          <SunIcon className="w-6 h-6 text-yellow-400" />
+          <SunIcon className="w-5 h-5 text-amber-400" />
         ) : (
-          <MoonIcon className="w-6 h-6 text-gray-700" />
+          <MoonIcon className="w-5 h-5 text-amber-300" />
         )}
       </button>
 
       {/* Login Card */}
-      <div
-        className={`w-full max-w-sm p-8 rounded-2xl shadow-md transition-all duration-300 ${
-          isDark ? "bg-gray-800" : "bg-white border border-gray-200"
-        }`}
-      >
-        <h2 className="text-2xl font-semibold text-center mb-6">Login</h2>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* User ID */}
-          <div>
-            <label className="block text-sm font-medium mb-1">User ID</label>
-            <input
-              type="text"
-              name="userId"
-              value={formData.userId}
-              onChange={handleChange}
-              placeholder="Enter your ID"
-              className={`w-full px-4 py-2 rounded-lg border focus:outline-none transition-all duration-200 ${
-                isDark
-                  ? "bg-gray-700 border-gray-600 focus:border-yellow-400"
-                  : "bg-gray-50 border-gray-300 focus:border-yellow-500"
-              }`}
-              required
-            />
+      <div className="relative z-10 w-full max-w-md mx-4">
+        <div className="bg-gradient-to-br from-neutral-900/95 via-black/95 to-neutral-900/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-amber-600/30 p-8 md:p-10 transition-all duration-500 hover:shadow-amber-500/20 hover:border-amber-500/50">
+          {/* Logo/Header Section */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 mb-4 shadow-lg shadow-amber-500/30">
+              <Lock className="w-8 h-8 text-black" />
+            </div>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-amber-400 via-yellow-500 to-amber-400 bg-clip-text text-transparent mb-2">
+              Welcome Back
+            </h2>
+            <p className="text-amber-300/70 text-sm">Sign in to continue to your workspace</p>
           </div>
 
-          {/* Password */}
-          <div>
-            <label className="block text-sm font-medium mb-1">Password</label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              placeholder="Enter your password"
-              className={`w-full px-4 py-2 rounded-lg border focus:outline-none transition-all duration-200 ${
-                isDark
-                  ? "bg-gray-700 border-gray-600 focus:border-yellow-400"
-                  : "bg-gray-50 border-gray-300 focus:border-yellow-500"
-              }`}
-              required
-            />
-          </div>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* User ID */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-amber-200 mb-2">
+                <User className="w-4 h-4" />
+                User ID
+              </label>
+              <div className="relative">
+                <input
+                  type="text"
+                  name="userId"
+                  value={formData.userId}
+                  onChange={handleChange}
+                  placeholder="Enter your ID"
+                  className="w-full px-4 py-3 pl-11 rounded-xl bg-black/40 border border-amber-500/30 text-amber-100 placeholder-amber-500/50 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all duration-200 backdrop-blur-sm"
+                  required
+                />
+                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-amber-500/60" />
+              </div>
+            </div>
 
-          {/* Error */}
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+            {/* Password */}
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-semibold text-amber-200 mb-2">
+                <Lock className="w-4 h-4" />
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  type="password"
+                  name="password"
+                  value={formData.password}
+                  onChange={handleChange}
+                  placeholder="Enter your password"
+                  className="w-full px-4 py-3 pl-11 rounded-xl bg-black/40 border border-amber-500/30 text-amber-100 placeholder-amber-500/50 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition-all duration-200 backdrop-blur-sm"
+                  required
+                />
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-amber-500/60" />
+              </div>
+            </div>
 
-          {/* Submit */}
-          <button
-            type="submit"
-            disabled={loading}
-            className={`w-full mt-4 bg-yellow-400 hover:bg-yellow-500 text-black font-semibold py-2 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 ${
-              loading ? "opacity-60 cursor-not-allowed" : ""
-            }`}
-          >
-            {loading && (
-              <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+            {/* Error */}
+            {error && (
+              <div className="p-3 rounded-lg bg-red-900/30 border border-red-500/50 text-red-300 text-sm flex items-center gap-2 animate-pulse">
+                <div className="w-1.5 h-1.5 rounded-full bg-red-400"></div>
+                {error}
+              </div>
             )}
-            {loading ? "Signing In..." : "Sign In"}
-          </button>
-        </form>
+
+            {/* Submit */}
+            <button
+              type="submit"
+              disabled={loading}
+              className={`w-full mt-6 bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-black font-bold py-3.5 rounded-xl transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-amber-500/30 hover:shadow-amber-500/50 hover:scale-[1.02] active:scale-[0.98] ${
+                loading ? "opacity-60 cursor-not-allowed" : ""
+              }`}
+            >
+              {loading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin"></div>
+                  <span>Signing In...</span>
+                </>
+              ) : (
+                <>
+                  <Lock className="w-5 h-5" />
+                  <span>Sign In</span>
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Footer */}
+          <div className="mt-6 text-center">
+            <p className="text-xs text-amber-400/50">
+              Secure access to your annotation workspace
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

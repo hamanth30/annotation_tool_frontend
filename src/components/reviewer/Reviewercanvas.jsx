@@ -80,6 +80,7 @@ export default function ReviewFile() {
   const [toolMode, setToolMode] = useState("rectangle"); // cursor | rectangle | polygon
   const [boxColor, setBoxColor] = useState("#d4a800");
   const [panelVisible, setPanelVisible] = useState(true);
+  const [brightness, setBrightness] = useState(0); // Brightness value: -1 to 1
 
   // Track previous rect count to detect new rects
   const prevCountRef = useRef(0);
@@ -882,11 +883,41 @@ export default function ReviewFile() {
                   Display
                 </button>
                 {menuOpen === "display" && (
-                  <div className="absolute top-full left-0 mt-2 w-48 bg-black/95 border border-amber-600 rounded-lg shadow-2xl z-50 overflow-hidden">
-                    <div className="py-1">
-                      <button className="w-full px-4 py-2.5 text-left text-amber-100 hover:bg-amber-600/20 transition-colors">Brightness</button>
-                      <button className="w-full px-4 py-2.5 text-left text-amber-100 hover:bg-amber-600/20 transition-colors">Contrast</button>
-                      <button className="w-full px-4 py-2.5 text-left text-amber-100 hover:bg-amber-600/20 transition-colors">Gamma</button>
+                  <div className="absolute top-full left-0 mt-2 w-64 bg-black/95 border border-amber-600 rounded-lg shadow-2xl z-50 overflow-hidden">
+                    <div className="py-3">
+                      {/* Brightness Slider */}
+                      <div className="px-4 py-2">
+                        <div className="flex items-center justify-between mb-2">
+                          <label className="text-sm font-medium text-amber-200">Brightness</label>
+                          <span className="text-xs text-amber-300/70 font-mono">{brightness > 0 ? '+' : ''}{brightness.toFixed(2)}</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="-1"
+                          max="1"
+                          step="0.01"
+                          value={brightness}
+                          onChange={(e) => setBrightness(parseFloat(e.target.value))}
+                          className="w-full h-2 bg-amber-900/30 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                          style={{
+                            background: `linear-gradient(to right, #78350f 0%, #78350f ${((brightness + 1) / 2) * 100}%, #1f2937 ${((brightness + 1) / 2) * 100}%, #1f2937 100%)`
+                          }}
+                        />
+                        <div className="flex justify-between text-xs text-amber-400/50 mt-1">
+                          <span>-1</span>
+                          <span>0</span>
+                          <span>+1</span>
+                        </div>
+                        <button
+                          onClick={() => setBrightness(0)}
+                          className="mt-2 w-full px-2 py-1 text-xs bg-amber-600/20 hover:bg-amber-600/30 text-amber-200 rounded border border-amber-600/50 transition-colors"
+                        >
+                          Reset
+                        </button>
+                      </div>
+                      <div className="border-t border-amber-700/30 my-1"></div>
+                      <button className="w-full px-4 py-2.5 text-left text-amber-100 hover:bg-amber-600/20 transition-colors opacity-50 cursor-not-allowed">Contrast (Coming soon)</button>
+                      <button className="w-full px-4 py-2.5 text-left text-amber-100 hover:bg-amber-600/20 transition-colors opacity-50 cursor-not-allowed">Gamma (Coming soon)</button>
                     </div>
                   </div>
                 )}
@@ -941,6 +972,7 @@ export default function ReviewFile() {
               drawEnabled={drawEnabled}
               mode={toolMode}
               boxColor={boxColor}
+              brightness={brightness}
             />
           </div>
 
@@ -1137,19 +1169,19 @@ export default function ReviewFile() {
                     //     }
                     // })
                     axios.put("http://localhost:8000/api/reviewer/reject", {
-                    project_id: projectId,
-                    file_id: fileId,
-                    reviewer_id: localStorage.getItem("userId"),
+                        project_id: projectId,
+                        file_id: fileId,
+                        reviewer_id: localStorage.getItem("userId"),
                     rejection_description: {
                         submitted_at: new Date().toISOString(),
                         description: rejectText
                     }
-                }, {
-                    headers: {
-                        Authorization: `Bearer ${token}`,
-                        "Content-Type": "application/json"
-                    }
-                })
+                    }, {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                            "Content-Type": "application/json"
+                        }
+                    })
 
                     .then(res => {
                         console.log("Rejected:", res.data);
