@@ -1,6 +1,7 @@
 
 import React, { useRef, useState, useEffect } from "react";
 import { Stage, Layer, Rect, Image, Transformer, Text, Group, Line, Shape } from "react-konva";
+import Konva from "konva";
 
 /**
  * DrawRect
@@ -12,6 +13,7 @@ import { Stage, Layer, Rect, Image, Transformer, Text, Group, Line, Shape } from
  *  - drawEnabled (boolean)
  *  - mode: "cursor" | "rectangle" | "polygon" | "polyline"
  *  - boxColor: hex color string for new shapes
+ *  - brightness: number from -1 to 1 for brightness adjustment
  */
 export default function DrawRect({
   width,
@@ -22,8 +24,11 @@ export default function DrawRect({
   drawEnabled = true,
   mode = "rectangle",
   boxColor = "#d4a800",
+  brightness = 0,
 }) {
   const [image, setImage] = useState(null);
+  const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
+  const [imageOffset, setImageOffset] = useState({ x: 0, y: 0 });
   const [newRect, setNewRect] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
   const [polygonPoints, setPolygonPoints] = useState([]);
@@ -33,13 +38,39 @@ export default function DrawRect({
   const isDraggingRef = useRef(false);
   const isTransformingRef = useRef(false);
 
+  const imageRef = useRef(null);
+
   useEffect(() => {
-    if (!imageUrl) return setImage(null);
+    if (!imageUrl) {
+      setImage(null);
+      setImageDimensions({ width: 0, height: 0 });
+      setImageOffset({ x: 0, y: 0 });
+      return;
+    }
     const img = new window.Image();
     img.crossOrigin = "anonymous";
     img.src = imageUrl;
-    img.onload = () => setImage(img);
-  }, [imageUrl]);
+    img.onload = () => {
+      setImage(img);
+      // Store native image dimensions
+      const imgWidth = img.naturalWidth || img.width;
+      const imgHeight = img.naturalHeight || img.height;
+      setImageDimensions({ width: imgWidth, height: imgHeight });
+      
+      // Calculate offset to center image on canvas
+      const offsetX = Math.max(0, (width - imgWidth) / 2);
+      const offsetY = Math.max(0, (height - imgHeight) / 2);
+      setImageOffset({ x: offsetX, y: offsetY });
+    };
+  }, [imageUrl, width, height]);
+
+  // Update brightness filter when brightness changes
+  useEffect(() => {
+    if (imageRef.current && brightness !== 0) {
+      imageRef.current.cache();
+      imageRef.current.getLayer()?.batchDraw();
+    }
+  }, [brightness]);
 
   // attach transformer to selected shape
   useEffect(() => {
@@ -344,7 +375,23 @@ export default function DrawRect({
       }}
     >
       <Layer ref={layerRef}>
-        {image && <Image image={image} width={width} height={height} />}
+        {/* Black background fill */}
+        <Rect x={0} y={0} width={width} height={height} fill="#000000" />
+        
+        {/* Image at native size, centered */}
+        {image && imageDimensions.width > 0 && imageDimensions.height > 0 && (
+          <Image 
+            ref={imageRef}
+            image={image} 
+            x={imageOffset.x}
+            y={imageOffset.y}
+            width={imageDimensions.width}
+            height={imageDimensions.height}
+            filters={brightness !== 0 ? [Konva.Filters.Brightness] : []}
+            brightness={brightness !== 0 ? (brightness + 1) : 1}
+            cache
+          />
+        )}
 
         {rectData.map((shape, idx) => {
           // Render rectangles
