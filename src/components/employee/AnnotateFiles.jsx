@@ -356,6 +356,7 @@ const fetchRejectionComments = async () => {
     );
     
     console.log("Fetched rejection comments:", res.data);
+    console.log("timestamp:", res.data?.submitted_at);
     
     // Extract rejection_description array from response
     const comments = res.data?.rejection_description || [];
