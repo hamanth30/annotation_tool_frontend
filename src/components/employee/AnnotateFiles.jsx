@@ -14,6 +14,7 @@ import {
   Minus,
 } from "lucide-react";
 
+
 const API_BASE_URL = "http://localhost:8000";
 
 // Utility to get attributes for a class
@@ -75,6 +76,9 @@ export default function AnnotateFile() {
   // Track previous rect count to detect new rects
   const prevCountRef = useRef(0);
   const menuRef = useRef(null);
+
+  const [rejectionComments, setRejectionComments] = useState([]);
+const [loadingRejections, setLoadingRejections] = useState(false);
 
   // Close dropdown when clicking outside (from Code 1)
   useEffect(() => {
@@ -336,6 +340,51 @@ export default function AnnotateFile() {
   //   setModalOpen(true);
   //   setAnnotateTab("edit");
   // };
+
+
+  // Fetch rejection comments
+const fetchRejectionComments = async () => {
+  if (!fileId) return;
+  
+  setLoadingRejections(true);
+  try {
+    const res = await axios.get(
+      `${API_BASE_URL}/api/employee/rejection/${fileId}`,
+      {
+        headers: { Authorization: `Bearer ${token}` }
+      }
+    );
+    
+    console.log("Fetched rejection comments:", res.data);
+    
+    // Extract rejection_description array from response
+    const comments = res.data?.rejection_description || [];
+    setRejectionComments(comments);
+    
+    if (comments.length > 0) {
+      toast.info(`Loaded ${comments.length} rejection comment(s)`);
+    }
+  } catch (err) {
+    if (err.response?.status === 404) {
+      console.log("No rejection comments found for this file");
+      setRejectionComments([]);
+    } else {
+      console.error("Failed to load rejection comments:", err);
+      toast.error("Failed to load rejection comments");
+    }
+  } finally {
+    setLoadingRejections(false);
+  }
+};
+
+// Fetch rejection comments when file loads
+useEffect(() => {
+  if (fileId && imageUrl) {
+    fetchRejectionComments();
+  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [fileId, imageUrl]);
+
 
   const openModalForBox = (boxId) => {
   const box = rectData.find((r) => String(r.id) === String(boxId));
@@ -874,28 +923,50 @@ export default function AnnotateFile() {
                   <h3 className="text-base font-semibold text-amber-100 mb-3 text-center">ANNOTATE</h3>
                   
                   {/* Tabs */}
-                  <div className="flex gap-1.5 w-full">
-                    <button
-                      onClick={() => setAnnotateTab("create")}
-                      className={`flex-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-200 text-center ${
-                        annotateTab === "create"
-                          ? "bg-amber-500/20 border border-amber-400 text-amber-100 shadow-md"
-                          : "bg-black/60 border border-amber-600/20 text-amber-300 hover:bg-amber-800/20"
-                      }`}
-                    >
-                      Create
-                    </button>
-                    <button
-                      onClick={() => setAnnotateTab("edit")}
-                      className={`flex-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-200 text-center ${
-                        annotateTab === "edit"
-                          ? "bg-amber-500/20 border border-amber-400 text-amber-100 shadow-md"
-                          : "bg-black/60 border border-amber-600/20 text-amber-300 hover:bg-amber-800/20"
-                      }`}
-                    >
-                      Edit
-                    </button>
-                  </div>
+                  {/* Tabs */}
+<div className="flex gap-2">
+  <button
+    onClick={() => setAnnotateTab("create")}
+    className={`flex-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-200 text-center ${
+      annotateTab === "create"
+        ? "bg-amber-500/20 border border-amber-400 text-amber-100 shadow-md"
+        : "bg-black/60 border border-amber-600/20 text-amber-300 hover:bg-amber-800/20"
+    }`}
+  >
+    Create
+  </button>
+  
+  <button
+    onClick={() => setAnnotateTab("edit")}
+    className={`flex-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-200 text-center ${
+      annotateTab === "edit"
+        ? "bg-amber-500/20 border border-amber-400 text-amber-100 shadow-md"
+        : "bg-black/60 border border-amber-600/20 text-amber-300 hover:bg-amber-800/20"
+    }`}
+  >
+    Edit
+  </button>
+  
+  {/* NEW REJECTIONS TAB */}
+  <button
+    onClick={() => {
+      setAnnotateTab("rejections");
+      fetchRejectionComments(); // Refresh comments when tab is clicked
+    }}
+    className={`flex-1 px-2.5 py-1.5 rounded-md text-xs font-medium transition-all duration-200 text-center relative ${
+      annotateTab === "rejections"
+        ? "bg-amber-500/20 border border-amber-400 text-amber-100 shadow-md"
+        : "bg-black/60 border border-amber-600/20 text-amber-300 hover:bg-amber-800/20"
+    }`}
+  >
+    Rejections
+    {rejectionComments.length > 0 && (
+      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+        {rejectionComments.length}
+      </span>
+    )}
+  </button>
+</div>
                 </div>
               </div>
 
@@ -992,6 +1063,141 @@ export default function AnnotateFile() {
                           </div>
                         ))}
                       </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Rejections Tab */}
+                {annotateTab === "rejections" && (
+                  <div className="space-y-3">
+                    {/* Header with refresh button */}
+                    <div className="flex items-center justify-between pb-2 border-b border-amber-600/30">
+                      <h3 className="text-amber-200 text-sm font-semibold uppercase tracking-wide">
+                        Rejection Comments
+                      </h3>
+                      <button
+                        onClick={fetchRejectionComments}
+                        disabled={loadingRejections}
+                        className="px-2 py-1 text-[10px] bg-amber-600/20 hover:bg-amber-600/30 text-amber-200 rounded border border-amber-600/50 transition-colors disabled:opacity-50"
+                        title="Refresh comments"
+                      >
+                        {loadingRejections ? "Loading..." : "Refresh"}
+                      </button>
+                    </div>
+
+                    {/* Loading state */}
+                    {loadingRejections && (
+                      <div className="text-center py-8 text-amber-300/60 text-xs">
+                        Loading rejection comments...
+                      </div>
+                    )}
+
+                    {/* Empty state */}
+                    {!loadingRejections && rejectionComments.length === 0 && (
+                      <div className="text-center py-8 text-amber-300/60 text-xs">
+                        <div className="mb-2">✓</div>
+                        <div>No rejection comments for this file.</div>
+                        <div className="mt-1 text-[10px]">This annotation hasn't been rejected.</div>
+                      </div>
+                    )}
+
+                    {/* Comments list */}
+                    {!loadingRejections && rejectionComments.length > 0 && (
+                      <div className="space-y-3">
+                        {rejectionComments.map((comment, idx) => (
+                          <div
+                            key={idx}
+                            className="bg-black/40 border border-red-600/40 rounded-lg p-3 space-y-2"
+                          >
+                            {/* Comment header */}
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="flex-shrink-0 w-5 h-5 bg-red-600/20 border border-red-500/50 rounded-full flex items-center justify-center text-[10px] text-red-300 font-bold">
+                                  {idx + 1}
+                                </span>
+                                <span className="text-[10px] text-amber-300/70 font-mono">
+                                  ID: {comment.id || 'N/A'}
+                                </span>
+                              </div>
+                              {comment.timestamp && (
+                                <button
+                                  onClick={() => copyToClipboard(
+                                    new Date(comment.timestamp).toLocaleString(),
+                                    "Timestamp"
+                                  )}
+                                  className="p-0.5 text-amber-400/60 hover:text-amber-300 transition-colors"
+                                  title="Copy timestamp"
+                                >
+                                  <Copy size={12} />
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Timestamp */}
+                            {comment.timestamp && (
+                              <div className="text-[10px] text-amber-300/50">
+                                📅 {new Date(comment.timestamp).toLocaleString('en-US', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  second: '2-digit'
+                                })}
+                              </div>
+                            )}
+
+                            {/* Comment text */}
+                            <div className="bg-black/60 border border-red-600/30 rounded p-2.5">
+                              <p className="text-xs text-red-200 leading-relaxed whitespace-pre-wrap break-words">
+                                {comment.comment || comment.description || 'No comment provided'}
+                              </p>
+                            </div>
+
+                            {/* Reviewer info if available */}
+                            {comment.reviewer_name && (
+                              <div className="text-[10px] text-amber-300/60 flex items-center gap-1">
+                                <span>👤</span>
+                                <span>Reviewer: {comment.reviewer_name}</span>
+                              </div>
+                            )}
+
+                            {/* Copy full comment button */}
+                            <button
+                              onClick={() => {
+                                const fullText = `Rejection Comment #${idx + 1}\n` +
+                                  `Timestamp: ${comment.timestamp ? new Date(comment.timestamp).toLocaleString() : 'N/A'}\n` +
+                                  `Comment: ${comment.comment || comment.description || 'No comment'}\n` +
+                                  (comment.reviewer_name ? `Reviewer: ${comment.reviewer_name}\n` : '');
+                                copyToClipboard(fullText, "Comment details");
+                              }}
+                              className="w-full px-2 py-1.5 text-[10px] bg-amber-900/40 hover:bg-amber-800/50 text-amber-300 rounded border border-amber-600/30 transition-colors flex items-center justify-center gap-1"
+                            >
+                              <Copy size={10} />
+                              Copy Comment Details
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Export all comments button */}
+                    {rejectionComments.length > 0 && (
+                      <button
+                        onClick={() => {
+                          const allComments = rejectionComments.map((c, i) => 
+                            `Comment #${i + 1}\n` +
+                            `Timestamp: ${c.timestamp ? new Date(c.timestamp).toLocaleString() : 'N/A'}\n` +
+                            `Comment: ${c.comment || c.description || 'No comment'}\n` +
+                            (c.reviewer_name ? `Reviewer: ${c.reviewer_name}\n` : '') +
+                            '\n---\n'
+                          ).join('\n');
+                          copyToClipboard(allComments, "All rejection comments");
+                        }}
+                        className="w-full px-3 py-2 text-xs bg-red-600/20 hover:bg-red-600/30 text-red-200 rounded border border-red-600/50 transition-colors font-medium"
+                      >
+                        📋 Copy All Comments
+                      </button>
                     )}
                   </div>
                 )}
