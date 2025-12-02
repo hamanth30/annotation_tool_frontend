@@ -1116,7 +1116,7 @@ useEffect(() => {
                                   {idx + 1}
                                 </span>
                                 <span className="text-[10px] text-amber-300/70 font-mono">
-                                  ID: {comment.id || 'N/A'}
+                                  Date: {comment.submitted_at || 'N/A'}
                                 </span>
                               </div>
                               {comment.timestamp && (
