@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect, useImperativeHandle, forwardRef } from "react";
 import {
   Stage,
   Layer,
@@ -83,7 +83,7 @@ const distancePointToSegment = (px, py, x1, y1, x2, y2) => {
  *  - boxColor: hex color string for new shapes
  *  - brightness: number from -1 to 1 for brightness adjustment
  */
-export default function DrawRect({
+const DrawRect = forwardRef(function DrawRect({
   width,
   height,
   imageUrl,
@@ -93,7 +93,7 @@ export default function DrawRect({
   mode = "rectangle",
   boxColor = "#d4a800",
   brightness = 0,
-}) {
+}, ref) {
   const [image, setImage] = useState(null);
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
   const [imageOffset, setImageOffset] = useState({ x: 0, y: 0 });
@@ -116,6 +116,24 @@ export default function DrawRect({
 
   const imageRef = useRef(null);
   const stageRef = useRef(null);
+
+  // Helper function to convert pointer position from stage coordinates to actual canvas coordinates
+  const getActualPointerPosition = (stage) => {
+    const pointer = stage.getPointerPosition();
+    if (!pointer) return null;
+    return {
+      x: (pointer.x - stagePos.x) / scale,
+      y: (pointer.y - stagePos.y) / scale,
+    };
+  };
+
+  // Expose fitToScreen function to parent component
+  useImperativeHandle(ref, () => ({
+    fitToScreen: () => {
+      setScale(1);
+      setStagePos({ x: 0, y: 0 });
+    },
+  }));
 
   // handle global Space key for panning
   useEffect(() => {
@@ -152,7 +170,7 @@ export default function DrawRect({
       const imgWidth = img.naturalWidth || img.width;
       const imgHeight = img.naturalHeight || img.height;
       setImageDimensions({ width: imgWidth, height: imgHeight });
-
+      
       const offsetX = Math.max(0, (width - imgWidth) / 2);
       const offsetY = Math.max(0, (height - imgHeight) / 2);
       setImageOffset({ x: offsetX, y: offsetY });
@@ -163,7 +181,7 @@ export default function DrawRect({
   useEffect(() => {
     if (imageRef.current) {
       if (brightness !== 0) {
-        imageRef.current.cache();
+      imageRef.current.cache();
       } else {
         imageRef.current.clearCache();
       }
@@ -175,7 +193,7 @@ export default function DrawRect({
   useEffect(() => {
     if (trRef.current) {
       const stage = trRef.current.getStage();
-      const selectedNode = selectedId
+      const selectedNode = selectedId 
         ? stage.findOne(`#rect-${selectedId}`) || stage.findOne(`#poly-${selectedId}`)
         : null;
       trRef.current.nodes(selectedNode ? [selectedNode] : []);
@@ -235,7 +253,7 @@ export default function DrawRect({
 
       // Handle rectangle drawing
       if (drawEnabled && mode === "rectangle") {
-        const pos = stage.getPointerPosition();
+        const pos = getActualPointerPosition(stage);
         if (!pos) return;
         isDrawing.current = true;
         startPos.current = pos;
@@ -243,7 +261,7 @@ export default function DrawRect({
       }
       // Handle polygon/polyline drawing
       else if (drawEnabled && (mode === "polygon" || mode === "polyline")) {
-        const pos = stage.getPointerPosition();
+        const pos = getActualPointerPosition(stage);
         if (!pos) return;
         if (!isDrawingPolygon) {
           setIsDrawingPolygon(true);
@@ -256,7 +274,7 @@ export default function DrawRect({
               Math.pow(pos.x - firstPoint.x, 2) +
                 Math.pow(pos.y - firstPoint.y, 2)
             );
-            if (distance < 10) {
+            if (distance < 10 / scale) { // Adjust threshold for zoom level
               // Close polygon
               finishPolygon();
               return;
@@ -285,7 +303,7 @@ export default function DrawRect({
 
     if (!isDrawing.current || !newRect || isDraggingRef.current) return;
     const stage = e.target.getStage();
-    const pos = stage.getPointerPosition();
+    const pos = getActualPointerPosition(stage);
     if (!pos) return;
 
     setNewRect({
@@ -348,7 +366,7 @@ export default function DrawRect({
     const id = `${Date.now()}_${Math.floor(Math.random() * 10000)}`;
     const basePoints = polygonPoints.flatMap((p) => [p.x, p.y]);
     let points = basePoints;
-
+    
     // For polygon, we can store with closing point duplicated,
     // buildStoredPoints will ensure closure later as well.
     if (mode === "polygon" && polygonPoints.length >= 3) {
@@ -405,7 +423,7 @@ export default function DrawRect({
     } else if (shape.type === "polygon" || shape.type === "polyline") {
       const dx = node.x();
       const dy = node.y();
-      const updatedPoints = (shape.points || []).map((p, i) =>
+      const updatedPoints = (shape.points || []).map((p, i) => 
         i % 2 === 0 ? p + dx : p + dy
       );
       const updated = rectData.map((r) =>
@@ -444,7 +462,7 @@ export default function DrawRect({
           : r
       );
       onChange && onChange(updated);
-    }
+    } 
     // Handle polygons and polylines (scale whole shape)
     else if (shape.type === "polygon" || shape.type === "polyline") {
       const scaleX = node.scaleX();
@@ -544,23 +562,23 @@ export default function DrawRect({
       onWheel={handleWheel}
       style={{
         cursor:
-          mode === "cursor"
-            ? "default"
+          mode === "cursor" 
+            ? "default" 
             : drawEnabled &&
               (mode === "rectangle" || mode === "polygon" || mode === "polyline")
-            ? "crosshair"
+            ? "crosshair" 
             : "default",
       }}
     >
       <Layer ref={layerRef}>
         {/* Black background fill */}
         <Rect x={0} y={0} width={width} height={height} fill="#000000" />
-
+        
         {/* Image at native size, centered */}
         {image && imageDimensions.width > 0 && imageDimensions.height > 0 && (
-          <Image
+          <Image 
             ref={imageRef}
-            image={image}
+            image={image} 
             x={imageOffset.x}
             y={imageOffset.y}
             width={imageDimensions.width}
@@ -615,15 +633,15 @@ export default function DrawRect({
               </Group>
             );
           }
-
+          
           // Render polygons and polylines
           if (shape.type === "polygon" || shape.type === "polyline") {
             const rawPoints = shape.points || [];
             const logicalPoints = getLogicalPoints(shape.type, rawPoints);
             if (logicalPoints.length === 0) return null;
-
+            
             const isSelected = selectedId === shape.id;
-
+            
             // Calculate bounding box for transformer using logical vertices
             let minX = logicalPoints[0];
             let minY = logicalPoints[1];
@@ -660,11 +678,11 @@ export default function DrawRect({
               if (mode !== "cursor") return;
 
               const stage = e.target.getStage();
-              const pointer = stage.getPointerPosition();
-              if (!pointer) return;
+              const actualPos = getActualPointerPosition(stage);
+              if (!actualPos) return;
 
-              const clickX = pointer.x;
-              const clickY = pointer.y;
+              const clickX = actualPos.x;
+              const clickY = actualPos.y;
 
               if (vertexCount < 2) return;
 
@@ -695,7 +713,7 @@ export default function DrawRect({
                 }
               }
 
-              const threshold = 8; // pixels
+              const threshold = 8 / scale; // Convert screen pixels to canvas pixels
               if (insertIndex === -1 || closestDist > threshold) {
                 // Just selection, no point insert
                 return;
@@ -709,15 +727,15 @@ export default function DrawRect({
             // Dragging a single vertex
             const handleVertexDragMove = (vertexIndex, e) => {
               e.cancelBubble = true;
-              const absPos = e.target.getAbsolutePosition();
-              const absX = absPos.x;
-              const absY = absPos.y;
+              const stage = e.target.getStage();
+              const actualPos = getActualPointerPosition(stage);
+              if (!actualPos) return;
 
               const newLogical = getLogicalPoints(shape.type, shape.points || []);
               if (vertexIndex * 2 + 1 >= newLogical.length) return;
 
-              newLogical[vertexIndex * 2] = absX;
-              newLogical[vertexIndex * 2 + 1] = absY;
+              newLogical[vertexIndex * 2] = actualPos.x;
+              newLogical[vertexIndex * 2 + 1] = actualPos.y;
 
               updateShapePoints(shape.id, shape.type, newLogical);
             };
@@ -737,7 +755,7 @@ export default function DrawRect({
               newLogical.splice(vertexIndex * 2, 2);
               updateShapePoints(shape.id, shape.type, newLogical);
             };
-
+            
             return (
               <Group
                 key={shape.id}
@@ -803,12 +821,12 @@ export default function DrawRect({
 
                 {/* Label */}
                 {relativePoints.length > 0 && (
-                  <Text
-                    text={`#${idx + 1}`}
-                    x={relativePoints[0] + 6}
-                    y={relativePoints[1] - 18}
-                    fontSize={13}
-                    fill="#d4a800"
+                  <Text 
+                    text={`#${idx + 1}`} 
+                    x={relativePoints[0] + 6} 
+                    y={relativePoints[1] - 18} 
+                    fontSize={13} 
+                    fill="#d4a800" 
                   />
                 )}
 
@@ -929,4 +947,6 @@ export default function DrawRect({
       </Layer>
     </Stage>
   );
-}
+});
+
+export default DrawRect;

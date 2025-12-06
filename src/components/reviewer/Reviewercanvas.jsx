@@ -86,6 +86,7 @@ export default function ReviewFile() {
   // Track previous rect count to detect new rects
   const prevCountRef = useRef(0);
   const menuRef = useRef(null);
+  const drawRectRef = useRef(null);
   // Track if initial annotations have been loaded (to prevent saving on initial load)
   const initialLoadRef = useRef(false);
   // Track if there are unsaved changes
@@ -863,6 +864,18 @@ export default function ReviewFile() {
                       </button>
 
                       <button
+                        onClick={() => { 
+                          if (drawRectRef.current) {
+                            drawRectRef.current.fitToScreen();
+                          }
+                          setMenuOpen(null);
+                        }}
+                        className="w-full px-4 py-2.5 text-left text-amber-100 hover:bg-amber-600/20 hover:text-amber-200 transition-colors"
+                      >
+                        Fit to screen
+                      </button>
+
+                      <button
                         onClick={() => { setShowAnnotationDataModal(true); setMenuOpen(null); }}
                         className="w-full px-4 py-2.5 text-left text-amber-100 hover:bg-amber-600/20 hover:text-amber-200 transition-colors"
                       >
@@ -965,6 +978,7 @@ export default function ReviewFile() {
 
           <div className="rounded-xl shadow-2xl border border-amber-500 overflow-hidden transition-transform duration-300 hover:scale-[1.005]">
             <DrawRect
+              ref={drawRectRef}
               width={canvasWidth}
               height={660}
               imageUrl={imageUrl}
