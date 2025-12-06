@@ -25,6 +25,7 @@ import RandomAssignedFilesReview from "./components/reviewer/showrandomfiles"
 import ReviewFile from "./components/reviewer/Reviewercanvas"
 import AssignToAnnotatorPage from "./components/admin/table_assign_annotation_file"
 import AssignedAdminFilesReviewer from "./components/reviewer/showadminfiles"
+import WeeklyStats from "./components/employee/bar"
 function App() {
   return (
     <>
@@ -74,7 +75,7 @@ function App() {
           <Route path="/draw" element={<DrawRect />} />
           <Route path="/employee/adminfiles/:projectId/:employeeId" element={<AssignedAdminFiles />} />{/*add a back button*/}
           <Route path="/employee/randomfiles/:projectId/:employeeId" element={<RandomAssignedFiles />} />
-
+          <Route path="/bar/:projectId/:userId" element={<WeeklyStats/>} />
 
 
 
