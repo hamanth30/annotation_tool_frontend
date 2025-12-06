@@ -61,6 +61,10 @@ const EmployeeDashboard = () => {
   const handleReviewAdmin = (projectId) =>
     navigate(`/reviewer/seeassignedreviewfiles/${projectId}`);
 
+  const handleStatics=(projectId)=>{
+    navigate(`/bar/${projectId}/${userId}`)
+
+  }
   if (loading)
     return (
       <div className="flex justify-center items-center h-screen text-gray-500 animate-pulse">
@@ -147,6 +151,13 @@ const EmployeeDashboard = () => {
                     className="bg-green-700 text-white py-2 px-3 rounded-lg shadow-sm hover:bg-green-800 hover:shadow-md transition"
                   >
                     Admin assigned file
+                  </button>
+
+                   <button
+                    onClick={() => handleStatics(project.project_id)}
+                    className="bg-green-700 text-white py-2 px-3 rounded-lg shadow-sm hover:bg-green-800 hover:shadow-md transition"
+                  >
+                    My Statistics
                   </button>
 
                   {project.role === "reviewer" && (
