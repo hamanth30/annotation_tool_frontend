@@ -29,6 +29,9 @@ const NewProject = () => {
 
   const [searchQuery, setSearchQuery] = useState("");
 
+  const [instructionFile, setInstructionFile] = useState(null);
+
+
   const API_BASE_URL = "http://localhost:8000";
 
   // --- Fetch Annotators ---
@@ -83,18 +86,40 @@ const NewProject = () => {
     return await res.json();
   };
 
-  const uploadFilesToS3 = async (projectName, files) => {
-    const formData = new FormData();
-    formData.append("id", Date.now().toString());
-    formData.append("project_name", projectName);
-    files.forEach(f => formData.append("proofImages", f.file));
-    const res = await fetch(`${API_BASE_URL}/api/admin/upload-to-s3`, {
-      method: "POST",
-      body: formData,
-    });
-    if (!res.ok) throw new Error((await res.json()).detail || "Upload failed");
-    return await res.json();
-  };
+  // const uploadFilesToS3 = async (projectName, files) => {
+  //   const formData = new FormData();
+  //   formData.append("id", Date.now().toString());
+  //   formData.append("project_name", projectName);
+  //   files.forEach(f => formData.append("proofImages", f.file));
+  //   const res = await fetch(`${API_BASE_URL}/api/admin/upload-to-s3`, {
+  //     method: "POST",
+  //     body: formData,
+  //   });
+  //   if (!res.ok) throw new Error((await res.json()).detail || "Upload failed");
+  //   return await res.json();
+  // };
+
+  const uploadFilesToS3 = async (projectName, files, instructionFile) => {
+  const formData = new FormData();
+
+  formData.append("id", Date.now().toString());
+  formData.append("project_name", projectName);
+
+  files.forEach(f => formData.append("proofImages", f.file));
+
+  if (instructionFile) {
+    formData.append("instructionFile", instructionFile);
+  }
+
+  const res = await fetch(`${API_BASE_URL}/api/admin/upload-to-s3`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!res.ok) throw new Error((await res.json()).detail || "Upload failed");
+  return await res.json();
+};
+
 
   // --- UI Handlers ---
   const toggleAnnotator = (id) =>
@@ -187,13 +212,20 @@ const NewProject = () => {
       const projectResult = await createProject(projectData);
       if (projectData.annotators.length)
         await addProjectMembers(projectData.name, projectData.annotators);
-      if (uploadedImages.length)
-        await uploadFilesToS3(projectData.name, uploadedImages);
+      if (uploadedImages.length){
+        //await uploadFilesToS3(projectData.name, uploadedImages);
+        await uploadFilesToS3(
+        projectData.name,
+        uploadedImages,
+        instructionFile
+      );}
+
       setSuccess("Project created successfully!");
       setProjectName("");
       setClasses([]);
       setSelectedAnnotators([]);
       setUploadedImages([]);
+      setInstructionFile(null);
     } catch (err) {
       setError(err.message || "Failed to create project");
     } finally {
@@ -444,6 +476,54 @@ const NewProject = () => {
           </div>
         ))}
       </div>
+
+
+      {/* Instructions Upload */}
+      <div className="mb-8">
+        <h3 className="text-xl font-semibold text-amber-300 mb-4">
+          Instructions Document
+        </h3>
+
+        <label
+          htmlFor="instructionUpload"
+          className="flex flex-col items-center justify-center w-full border-2 border-dashed border-amber-500/50 rounded-xl py-8 cursor-pointer hover:bg-amber-500/10 hover:border-amber-500 transition-all bg-gray-800/30"
+        >
+          <UploadCloud className="text-amber-400 mb-2" size={32} />
+          <span className="text-amber-300 font-medium">
+            Click to upload instruction document (PDF, DOCX, etc.)
+          </span>
+          <span className="text-sm text-amber-400/70 mt-1">
+            Only one file allowed
+          </span>
+
+          <input
+            id="instructionUpload"
+            type="file"
+            accept=".pdf,.doc,.docx,.txt,.xlsx,.pptx,*"
+            className="hidden"
+            onChange={(e) => {
+              if (e.target.files.length > 0) {
+                setInstructionFile(e.target.files[0]);
+              }
+            }}
+          />
+        </label>
+
+  {instructionFile && (
+    <div className="mt-4 flex items-center justify-between bg-gray-800/50 border border-amber-500/30 rounded-xl px-4 py-3">
+      <p className="text-amber-200">
+        {instructionFile.name}
+      </p>
+      <button
+        onClick={() => setInstructionFile(null)}
+        className="text-red-400 hover:text-red-300 transition-colors"
+      >
+        Remove
+      </button>
+    </div>
+  )}
+</div>
+
 
       {/* Upload Images */}
       <div className="mb-8">
