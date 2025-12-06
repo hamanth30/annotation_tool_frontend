@@ -63,6 +63,7 @@ export default function AnnotateFile() {
   const [showTaskModal, setShowTaskModal] = useState(false);
   const [showAnnotationDataModal, setShowAnnotationDataModal] = useState(false);
   const [viewingPointsFor, setViewingPointsFor] = useState(null);
+  const [showShortcutsModal, setShowShortcutsModal] = useState(false);
 
   // Edit options state
   const [drawEnabled, setDrawEnabled] = useState(true);
@@ -873,7 +874,7 @@ useEffect(() => {
                   <div className="absolute top-full left-0 mt-2 w-52 bg-black/95 border border-amber-600 rounded-lg shadow-2xl z-50 overflow-hidden">
                     <div className="py-1">
                       <button className="w-full px-4 py-2.5 text-left text-amber-100 hover:bg-amber-600/20 transition-colors">Guideline</button>
-                      <button className="w-full px-4 py-2.5 text-left text-amber-100 hover:bg-amber-600/20 transition-colors">Shortcut menu</button>
+                      <button onClick={() => { setShowShortcutsModal(true); setMenuOpen(null); }} className="w-full px-4 py-2.5 text-left text-amber-100 hover:bg-amber-600/20 transition-colors">Shortcut menu</button>
                       <button className="w-full px-4 py-2.5 text-left text-amber-100 hover:bg-amber-600/20 transition-colors">Log file</button>
                       <button className="w-full px-4 py-2.5 text-left text-amber-100 hover:bg-amber-600/20 transition-colors">Provide feedback</button>
                     </div>
@@ -1395,6 +1396,200 @@ useEffect(() => {
             </div>
             <div className="flex-shrink-0 p-4 border-t border-amber-700/30 flex justify-end">
               <button onClick={() => setShowAnnotationDataModal(false)} className="px-4 py-2 rounded-md border border-amber-600 text-amber-200 text-sm hover:bg-amber-600/20 transition-colors">Close</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Shortcuts Modal */}
+      {showShortcutsModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/70" onClick={() => setShowShortcutsModal(false)} />
+          <div className="relative bg-gradient-to-b from-neutral-900 to-black rounded-lg shadow-2xl w-[90vw] max-w-5xl max-h-[90vh] overflow-hidden z-10 border border-amber-600/40 flex flex-col">
+            <div className="flex-shrink-0 p-4 border-b border-amber-700/30 flex items-center justify-between">
+              <h4 className="text-lg font-semibold text-amber-100">Keyboard Shortcuts</h4>
+              <button
+                onClick={() => setShowShortcutsModal(false)}
+                className="px-3 py-1.5 text-xs bg-amber-600/20 hover:bg-amber-600/30 text-amber-200 rounded border border-amber-600/50 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Common Shortcuts Column */}
+                <div>
+                  <h5 className="text-base font-semibold text-amber-200 mb-4 pb-2 border-b border-amber-700/30">Common Shortcuts</h5>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">Ctrl + S</span>
+                      <span className="text-amber-100">Save annotation</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">Ctrl + A</span>
+                      <span className="text-amber-100">Submit annotation</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">H</span>
+                      <span className="text-amber-100">Hide / Unhide all annotation</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">Esc</span>
+                      <span className="text-amber-100">Unfinish the label</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">1</span>
+                      <span className="text-amber-100">Create a new Polygon</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">2</span>
+                      <span className="text-amber-100">Create a new Polyline</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">3</span>
+                      <span className="text-amber-100">Create a new Rectangle</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">4</span>
+                      <span className="text-amber-100">Create a new Cuboid</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">5</span>
+                      <span className="text-amber-100">Create a new Line</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">6</span>
+                      <span className="text-amber-100">Create a new Keypoint</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">7</span>
+                      <span className="text-amber-100">Create a new point</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">Scroll</span>
+                      <span className="text-amber-100">Zoom in/out</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">Ctrl + D</span>
+                      <span className="text-amber-100">Increase height of the Rectangle</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">Ctrl + F</span>
+                      <span className="text-amber-100">Increase width of the Rectangle</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">A</span>
+                      <span className="text-amber-100">Move the rectangle to left</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">S</span>
+                      <span className="text-amber-100">Move the rectangle to bottom</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">D</span>
+                      <span className="text-amber-100">Move the rectangle to right</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">W</span>
+                      <span className="text-amber-100">Move the rectangle to top</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">L</span>
+                      <span className="text-amber-100">Display the Label summary window</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">Mouse left button</span>
+                      <span className="text-amber-100">Double click in the line creates nodes in Polyline & Polygon</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">Mouse right button</span>
+                      <span className="text-amber-100">Removes nodes in Polyline & Polygon</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3D - Pointcloud & Video Column */}
+                <div>
+                  <h5 className="text-base font-semibold text-amber-200 mb-4 pb-2 border-b border-amber-700/30">3D - Pointcloud</h5>
+                  <div className="space-y-3 text-sm mb-6">
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">Alt + A</span>
+                      <span className="text-amber-100">Move left in the point cloud</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">Alt + S</span>
+                      <span className="text-amber-100">Move rear in the point cloud</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">Alt + D</span>
+                      <span className="text-amber-100">Move right in the point cloud</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">Alt + W</span>
+                      <span className="text-amber-100">Move front in the point cloud</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">Q + Scroll</span>
+                      <span className="text-amber-100">Elliptical rotate</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">E + Scroll</span>
+                      <span className="text-amber-100">Helicopter rotate</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">X</span>
+                      <span className="text-amber-100">Resize the sides of cuboid</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">C</span>
+                      <span className="text-amber-100">Resize the height of cuboid</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">Q</span>
+                      <span className="text-amber-100">Rotate the sides of cuboid</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">E</span>
+                      <span className="text-amber-100">Tilt the cuboid in 1 degree</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">Ctrl + Q</span>
+                      <span className="text-amber-100">Rotate the sides of cuboid in 1 degree</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">G</span>
+                      <span className="text-amber-100">Hide/Unhide Grid window</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">P</span>
+                      <span className="text-amber-100">Switch to 3D view</span>
+                    </div>
+                  </div>
+
+                  <h5 className="text-base font-semibold text-amber-200 mb-4 pb-2 border-b border-amber-700/30 mt-6">Video file</h5>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">Right arrow</span>
+                      <span className="text-amber-100">Next frame (Video file)</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">Left arrow</span>
+                      <span className="text-amber-100">Previous frame (Video file)</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">Ctrl + [</span>
+                      <span className="text-amber-100">Keyframe start (Video file)</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-amber-800/20">
+                      <span className="text-amber-300 font-mono bg-black/40 px-2 py-1 rounded">Ctrl + ]</span>
+                      <span className="text-amber-100">Keyframe end (Video file)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="flex-shrink-0 p-4 border-t border-amber-700/30 flex justify-end">
+              <button onClick={() => setShowShortcutsModal(false)} className="px-4 py-2 rounded-md border border-amber-600 text-amber-200 text-sm hover:bg-amber-600/20 transition-colors">Close</button>
             </div>
           </div>
         </div>

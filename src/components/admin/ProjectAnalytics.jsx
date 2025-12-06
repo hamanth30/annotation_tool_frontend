@@ -22,6 +22,9 @@ const ProjectAnalytics = () => {
   const [taskCounts, setTaskCounts] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [downloadFormat, setDownloadFormat] = useState("json"); // "json" or "xml"
+  const [downloading, setDownloading] = useState(false);
+  const [downloadingCsv, setDownloadingCsv] = useState(false);
 
   // Fetch all projects for dropdown
   useEffect(() => {
@@ -67,6 +70,112 @@ const ProjectAnalytics = () => {
     }
   };
 
+  const handleDownloadOutput = async () => {
+  if (!selectedProject) {
+    setError("Please select a project before downloading output.");
+    return;
+  }
+
+  setError("");
+  setDownloading(true);
+
+  try {
+    // Decide which endpoint to call
+    const endpoint =
+      downloadFormat === "json"
+        ? `/api/admin/download-folder/${encodeURIComponent(selectedProject)}`
+        : `/api/admin/download-xml/${encodeURIComponent(selectedProject)}`;
+
+    const url = `${API_BASE_URL}${endpoint}`;
+    console.log("Downloading from:", url);
+
+    // Request zip file as blob
+    const response = await axios.get(url, {
+      responseType: "blob",
+    });
+
+    // Create a Blob and trigger browser download
+    const blob = new Blob([response.data], { type: "application/zip" });
+
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    const safeProjectName = selectedProject.replace(/\s+/g, "_");
+
+    // Filename based on your backend naming
+    const fileName =
+      downloadFormat === "json"
+        ? `${safeProjectName}_labels.zip`
+        : `${safeProjectName}_xml_files.zip`;
+
+    link.href = downloadUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(downloadUrl);
+  } catch (err) {
+    console.error("Error downloading output:", err);
+    const msg =
+      err.response?.data?.detail ||
+      err.message ||
+      "Failed to download output file";
+    setError(msg);
+  } finally {
+    setDownloading(false);
+  }
+};
+
+  const handleDownloadCsv = async () => {
+  if (!selectedProjectObj) {
+    setError("Please select a project before downloading CSV.");
+    return;
+  }
+
+  setError("");
+  setDownloadingCsv(true);
+
+  try {
+    const projectId = selectedProjectObj.id;
+
+    // Adjust path prefix if needed (assuming router prefix is /api/admin)
+    const url = `${API_BASE_URL}/api/admin/project/${encodeURIComponent(
+      projectId
+    )}/csv`;
+
+    console.log("Downloading CSV from:", url);
+
+    const response = await axios.get(url, {
+      responseType: "blob",
+    });
+
+    const blob = new Blob([response.data], { type: "text/csv" });
+    const downloadUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    const safeProjectName = selectedProject.replace(/\s+/g, "_");
+    const fileName = `project_${safeProjectName}.csv`;
+
+    link.href = downloadUrl;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(downloadUrl);
+  } catch (err) {
+    console.error("Error downloading CSV:", err);
+    const msg =
+      err.response?.data?.detail ||
+      err.message ||
+      "Failed to download CSV file";
+    setError(msg);
+  } finally {
+    setDownloadingCsv(false);
+  }
+};
+
+
+
   // Prepare data for charts
   const prepareChartData = () => {
     if (!taskCounts?.counts) return [];
@@ -80,33 +189,106 @@ const ProjectAnalytics = () => {
     ];
   };
 
+  const selectedProjectObj = projects.find(
+  (p) => p.name === selectedProject
+    );
+
   const chartData = prepareChartData();
   const COLORS = ["#8884d8", "#82ca9d", "#ffc658", "#ff7300"];
 
   return (
-    <div className="space-y-6">
-      {/* Project Selection Dropdown */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <label
-          htmlFor="project-select"
-          className="block text-sm font-medium text-gray-700 mb-2"
-        >
-          Select Project
-        </label>
-        <select
-          id="project-select"
-          value={selectedProject}
-          onChange={(e) => setSelectedProject(e.target.value)}
-          className="w-full md:w-1/3 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-        >
-          <option value="">-- Choose a project --</option>
-          {projects.map((project) => (
-            <option key={project.id} value={project.name}>
-              {project.name}
-            </option>
-          ))}
-        </select>
-      </div>
+        <div className="space-y-6">
+            {/* Project Selection Dropdown */}
+            <div className="bg-white rounded-lg shadow-sm p-6 flex flex-col md:flex-row md:items-end md:justify-between gap-4">
+            {/* Left: Project selection */}
+            <div className="w-full md:w-1/2">
+              <label
+                htmlFor="project-select"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Select Project
+              </label>
+              <select
+                id="project-select"
+                value={selectedProject}
+                onChange={(e) => setSelectedProject(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+              >
+                <option value="">-- Choose a project --</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.name}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Middle: Productivity CSV download */}
+            <div className="w-full md:w-52">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Productivity CSV
+              </label>
+              <button
+                type="button"
+                onClick={handleDownloadCsv}
+                disabled={!selectedProjectObj || downloadingCsv}
+                className={`w-full px-4 py-2 rounded-lg text-sm font-medium text-white transition
+                  ${
+                    !selectedProjectObj || downloadingCsv
+                      ? "bg-gray-300 cursor-not-allowed"
+                      : "bg-emerald-600 hover:bg-emerald-700"
+                  }`}
+              >
+                {downloadingCsv
+                  ? "Downloading..."
+                  : selectedProject
+                  ? "Download CSV"
+                  : "Select a project first"}
+              </button>
+            </div>
+
+            {/* Right: Output download controls */}
+            <div className="w-full md:w-auto flex flex-col md:flex-row items-stretch md:items-end gap-3">
+              <div className="w-full md:w-40">
+                <label
+                  htmlFor="output-format"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
+                  Output format
+                </label>
+                <select
+                  id="output-format"
+                  value={downloadFormat}
+                  onChange={(e) => setDownloadFormat(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-sm"
+                >
+                  <option value="json">JSON (labels.zip)</option>
+                  <option value="xml">XML (xml_files.zip)</option>
+                </select>
+              </div>
+
+              <div className="w-full md:w-auto">
+                <button
+                  type="button"
+                  onClick={handleDownloadOutput}
+                  disabled={!selectedProject || downloading}
+                  className={`w-full md:w-auto px-4 py-2 rounded-lg text-sm font-medium text-white transition
+                    ${
+                      !selectedProject || downloading
+                        ? "bg-gray-300 cursor-not-allowed"
+                        : "bg-indigo-600 hover:bg-indigo-700"
+                    }`}
+                >
+                  {downloading
+                    ? "Downloading..."
+                    : selectedProject
+                    ? `Download ${downloadFormat.toUpperCase()}`
+                    : "Select a project first"}
+                </button>
+              </div>
+            </div>
+          </div>
+
 
       {/* Error Message */}
       {error && (
